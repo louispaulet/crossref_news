@@ -56,6 +56,11 @@ export VITE_API_BASE_URL="https://<your-worker>.workers.dev"
 
 The root `.env` can also hold `OPENAI_API_KEY` and `CLOUDFLARE_API_TOKEN` for local tooling. Use `.env.example` as the redacted template.
 
+For the Worker runtime itself:
+
+- local `make up` picks up `OPENAI_API_KEY` from the root `.env`
+- Cloudflare deploys should store the same key as a Worker secret, for example with `wrangler secret put OPENAI_API_KEY`
+
 Then deploy both pieces from the repo root:
 
 ```bash
@@ -82,12 +87,12 @@ The Worker exposes:
 
 Useful query params:
 
-- `theme`: theme id, default `fraud-detection`
+- `theme`: theme id, default `fraud-detection`; pass `none` for no-theme search mode
 - `from` / `to`: optional ISO dates in `YYYY-MM-DD` format
 - `days`: fallback sliding window, default `7`
 - `term`: repeatable extra query term
 - `rowsPerQuery`: Crossref rows per term, default `25`
-- `maxResults`: maximum deduplicated results, default `25`
+- `maxResults`: maximum deduplicated results, default `50`
 - `mailto`: optional contact email for polite Crossref access
 
 Example:
@@ -95,6 +100,19 @@ Example:
 ```bash
 curl "http://127.0.0.1:8787/news?theme=fraud-detection&from=2026-04-01&to=2026-04-19&term=xgboost"
 ```
+
+The Worker now caches canonical search bundles for 1 hour. `/news` returns up to 50 deduplicated articles plus pagination metadata, and the frontend shows the first 10 by default while keeping the rest local for `Load more`.
+
+## Executive summary API
+
+`GET /execsum` accepts the same canonical search params as `/news`.
+
+It reuses the cached search bundle, passes the full set of article metadata and every available abstract to OpenAI, and returns:
+
+- 3 takeaway bullets
+- 1 dense summary paragraph
+
+The route uses `gpt-5-nano` and caches the generated summary for 1 hour when the search bundle is unchanged.
 
 ## Repository notes
 
