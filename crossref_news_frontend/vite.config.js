@@ -9,7 +9,7 @@ const projectDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const basePath = mode === 'production' ? env.VITE_BASE_PATH || '/crossref_news/' : '/'
+  const basePath = mode === 'production' ? env.VITE_BASE_PATH || '/' : '/'
   const proxyTarget = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8787'
 
   return {
