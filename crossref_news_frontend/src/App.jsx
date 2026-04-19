@@ -69,6 +69,14 @@ function createDefaultWindow(days = 7) {
   }
 }
 
+function resolveThemeId(themes, preferredThemeId) {
+  if (themes.some((theme) => theme.id === preferredThemeId)) {
+    return preferredThemeId
+  }
+
+  return themes[0]?.id || FALLBACK_CONFIG.defaultTheme
+}
+
 function parseTerms(value) {
   return value
     .split(/[\n,;]+/)
@@ -132,13 +140,14 @@ function formatPublishedDate(value) {
 
 function App() {
   const apiBaseUrl = getApiBaseUrl()
+  const initialWindow = createDefaultWindow(7)
   const [config, setConfig] = useState(FALLBACK_CONFIG)
   const [selectedTheme, setSelectedTheme] = useState(FALLBACK_CONFIG.defaultTheme)
   const [extraTerms, setExtraTerms] = useState('')
-  const [fromDate, setFromDate] = useState(() => createDefaultWindow(7).from)
-  const [toDate, setToDate] = useState(() => createDefaultWindow(7).to)
+  const [fromDate, setFromDate] = useState(() => initialWindow.from)
+  const [toDate, setToDate] = useState(() => initialWindow.to)
   const [articles, setArticles] = useState([])
-  const [windowInfo, setWindowInfo] = useState(createDefaultWindow(7))
+  const [windowInfo, setWindowInfo] = useState(initialWindow)
   const [queryInfo, setQueryInfo] = useState(null)
   const [backendNote, setBackendNote] = useState('Loading live Crossref news...')
   const [loading, setLoading] = useState(true)
@@ -146,8 +155,12 @@ function App() {
   const [searchRequestId, setSearchRequestId] = useState(1)
 
   const themes = config.themes?.length > 0 ? config.themes : FALLBACK_THEMES
+  const defaultThemeId = resolveThemeId(themes, config.defaultTheme)
   const activeTheme =
-    themes.find((theme) => theme.id === selectedTheme) || themes[0] || FALLBACK_THEMES[0]
+    themes.find((theme) => theme.id === selectedTheme) ||
+    themes.find((theme) => theme.id === defaultThemeId) ||
+    themes[0] ||
+    FALLBACK_THEMES[0]
 
   useEffect(() => {
     let alive = true
@@ -182,10 +195,15 @@ function App() {
           ...data,
           themes: normalizedThemes,
         })
+        const resolvedDefaultThemeId = resolveThemeId(
+          normalizedThemes,
+          data.defaultTheme || FALLBACK_CONFIG.defaultTheme,
+        )
+
         setSelectedTheme((currentTheme) =>
           normalizedThemes.some((theme) => theme.id === currentTheme)
             ? currentTheme
-            : data.defaultTheme || normalizedThemes[0].id,
+            : resolvedDefaultThemeId,
         )
         setBackendNote((current) =>
           current === 'Loading live Crossref news...'
@@ -298,8 +316,9 @@ function App() {
   }))
 
   const handleReset = () => {
-    const defaults = createDefaultWindow(activeTheme?.defaultDays || 7)
-    setSelectedTheme(config.defaultTheme || FALLBACK_CONFIG.defaultTheme)
+    const defaultTheme = themes.find((theme) => theme.id === defaultThemeId) || themes[0] || FALLBACK_THEMES[0]
+    const defaults = createDefaultWindow(defaultTheme?.defaultDays || 7)
+    setSelectedTheme(defaultTheme.id)
     setExtraTerms('')
     setFromDate(defaults.from)
     setToDate(defaults.to)
