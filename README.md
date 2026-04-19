@@ -6,6 +6,10 @@ This repo contains a small Python demo that searches recent scholarly metadata
 for fraud-detection-adjacent topics, deduplicates overlapping records, and
 prints a concise briefing in the terminal.
 
+It also now includes a Vite + React + Tailwind frontend prototype in
+`crossref_news_frontend/`. That app is a static, backend-agnostic academic news
+landing page for now, so it can be developed before the API is ready.
+
 ## What it looks for
 
 By default the demo searches the last 7 days for combinations of:
@@ -44,3 +48,5 @@ python3 crossref_news_demo.py --mailto you@example.com
   `CROSSREF_MAILTO` is recommended.
 - Search results are metadata-only and may vary depending on how publishers
   expose titles, dates, abstracts, and links in Crossref.
+- The frontend prototype currently uses mocked article cards and no live API
+  calls.
