@@ -5,6 +5,7 @@
 - Prefer stdlib-first changes unless a dependency is clearly needed.
 - Keep terminal output concise and avoid unnecessary scaffolding.
 - Update the README whenever the runtime workflow, CLI, or assumptions change.
+- Always commit and push after a change.
 
 ## Current project shape
 

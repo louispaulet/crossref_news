@@ -93,9 +93,36 @@ function formatPublishedDate(value) {
     return 'Unknown date'
   }
 
-  const parsed = new Date(`${value}T00:00:00`)
+  const isoYear = /^(\d{4})$/
+  const isoMonth = /^(\d{4})-(\d{2})$/
+  const isoDay = /^(\d{4})-(\d{2})-(\d{2})$/
+
+  let parsed
+  if (isoDay.test(value)) {
+    parsed = new Date(`${value}T00:00:00`)
+  } else if (isoMonth.test(value)) {
+    const [, year, month] = value.match(isoMonth)
+    parsed = new Date(Number(year), Number(month) - 1, 1)
+  } else if (isoYear.test(value)) {
+    const [, year] = value.match(isoYear)
+    parsed = new Date(Number(year), 0, 1)
+  } else {
+    return value
+  }
+
   if (Number.isNaN(parsed.getTime())) {
     return value
+  }
+
+  if (isoYear.test(value)) {
+    return value
+  }
+
+  if (isoMonth.test(value)) {
+    return new Intl.DateTimeFormat('en', {
+      month: 'short',
+      year: 'numeric',
+    }).format(parsed)
   }
 
   return new Intl.DateTimeFormat('en', {

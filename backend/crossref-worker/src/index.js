@@ -117,10 +117,42 @@ function formatDateParts(dateParts) {
     return "unknown date";
   }
 
-  const [year, month = 1, day = 1] = dateParts;
-  return [year, month, day]
-    .map((part, index) => (index === 0 ? String(part).padStart(4, "0") : String(part).padStart(2, "0")))
-    .join("-");
+  const normalized = dateParts
+    .slice(0, 3)
+    .map((part) => Number.parseInt(part, 10))
+    .filter((part) => Number.isFinite(part) && part > 0);
+
+  if (normalized.length === 0) {
+    return "unknown date";
+  }
+
+  const [year, month, day] = normalized;
+  const parts = [String(year).padStart(4, "0")];
+  if (normalized.length >= 2) {
+    parts.push(String(month).padStart(2, "0"));
+  }
+  if (normalized.length >= 3) {
+    parts.push(String(day).padStart(2, "0"));
+  }
+  return parts.join("-");
+}
+
+function datePartsToTimestamp(dateParts) {
+  if (!Array.isArray(dateParts) || dateParts.length === 0) {
+    return 0;
+  }
+
+  const normalized = dateParts
+    .slice(0, 3)
+    .map((part) => Number.parseInt(part, 10))
+    .filter((part) => Number.isFinite(part) && part > 0);
+
+  if (normalized.length === 0) {
+    return 0;
+  }
+
+  const [year, month = 1, day = 1] = normalized;
+  return Date.UTC(year, month - 1, day);
 }
 
 function extractDate(item) {
@@ -191,6 +223,14 @@ function recordFromItem(item, matchedTerm) {
   const title = (item.title && item.title.length > 0 ? item.title.join(" ") : "Untitled").trim() || "Untitled";
   const doi = (item.DOI || "").trim();
   const url = (item.URL || "").trim() || (doi ? `https://doi.org/${doi}` : "");
+  let publishedParts = null;
+  for (const fieldName of ["published-print", "published-online", "published", "created", "posted", "issued"]) {
+    const value = item[fieldName];
+    if (value && value["date-parts"] && value["date-parts"][0]) {
+      publishedParts = value["date-parts"][0];
+      break;
+    }
+  }
   return {
     title,
     doi,
@@ -200,6 +240,7 @@ function recordFromItem(item, matchedTerm) {
     container: chooseContainer(item),
     authors: extractAuthors(item),
     published: extractDate(item),
+    publishedParts,
     itemType: item.type || "unknown",
     matchedTerms: new Set([matchedTerm]),
     raw: item,
@@ -372,10 +413,8 @@ function dedupeRecords(records) {
 }
 
 function compareRecords(a, b) {
-  const aDate = Date.parse(`${a.published}T00:00:00Z`);
-  const bDate = Date.parse(`${b.published}T00:00:00Z`);
-  const aDateRank = Number.isFinite(aDate) ? aDate : 0;
-  const bDateRank = Number.isFinite(bDate) ? bDate : 0;
+  const aDateRank = datePartsToTimestamp(a.publishedParts);
+  const bDateRank = datePartsToTimestamp(b.publishedParts);
   if (aDateRank !== bDateRank) {
     return bDateRank - aDateRank;
   }
