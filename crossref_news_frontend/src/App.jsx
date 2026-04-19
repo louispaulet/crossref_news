@@ -398,107 +398,15 @@ function App() {
               Crossref News
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
-              A calm briefing on recent academic work about fraud detection.
+              A briefing on recent academic work about fraud detection.
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
               Search recent Crossref metadata for fraud detection, anomaly detection,
-              XGBoost, graph methods, and adjacent work. The interface stays narrow so
-              the evidence stays easy to read.
+              XGBoost, graph methods, and adjacent work. Source: Crossref metadata with
+              optional theme filters and extra terms.
             </p>
           </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300 shadow-xl shadow-slate-950/20 backdrop-blur">
-            <div className="flex items-center justify-between gap-6">
-              <span>Delivery</span>
-              <span className="font-medium text-sky-200">Worker + GitHub Pages</span>
-            </div>
-            <div className="mt-2 text-xs uppercase tracking-[0.25em] text-slate-500">
-              {config.service || FALLBACK_CONFIG.service}
-            </div>
-          </div>
         </header>
-
-        <section className="grid gap-5 py-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-slate-950/25 backdrop-blur">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-sky-100">
-                Live briefing
-              </span>
-              <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1 text-xs text-slate-300">
-                {loading ? 'Refreshing' : 'Ready'}
-              </span>
-            </div>
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Theme
-                </div>
-                <div className="mt-2 text-lg font-semibold text-white">{activeTheme.label}</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Window
-                </div>
-                <div className="mt-2 text-lg font-semibold text-white">
-                  {windowInfo.from} to {windowInfo.to}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Terms
-                </div>
-                <div className="mt-2 text-lg font-semibold text-white">
-                  {queryInfo?.terms?.length || activeTheme.terms.length} search terms
-                </div>
-              </div>
-            </div>
-
-            <p className="mt-5 text-sm leading-6 text-slate-300">{backendNote}</p>
-          </div>
-
-          <aside className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-slate-950/25 backdrop-blur">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Theme profile</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Theme presets available in the dropdown.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleReset}
-                className={secondaryButtonClass}
-              >
-                Reset filters
-              </button>
-            </div>
-
-            <div className="mt-5 space-y-3 text-sm text-slate-300">
-              <div className="rounded-2xl bg-slate-950/60 px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Label</div>
-                <div className="mt-1 font-medium text-white">{activeTheme.label}</div>
-              </div>
-              <div className="rounded-2xl bg-slate-950/60 px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Description</div>
-                <div className="mt-1 leading-6">{activeTheme.description}</div>
-              </div>
-              <div className="rounded-2xl bg-slate-950/60 px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Default terms</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {activeTheme.terms.map((term) => (
-                    <span
-                      key={term}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
-                    >
-                      {term}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
-        </section>
 
         <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-6">
           <form
@@ -591,6 +499,54 @@ function App() {
               Extra terms are appended
             </span>
           </div>
+
+          <details className="mt-5 rounded-3xl border border-white/10 bg-slate-950/60 p-5 text-sm text-slate-300 shadow-lg shadow-slate-950/15">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl outline-none">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Current theme</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Theme presets are selected in the dropdown.
+                </p>
+              </div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
+                Details
+              </span>
+            </summary>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={handleReset}
+                className={secondaryButtonClass}
+              >
+                Reset filters
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Theme</div>
+                <div className="mt-1 font-medium text-white">{activeTheme.label}</div>
+              </div>
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Description</div>
+                <div className="mt-1 leading-6">{activeTheme.description}</div>
+              </div>
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Default terms</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {activeTheme.terms.map((term) => (
+                    <span
+                      key={term}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
+                    >
+                      {term}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
         </section>
 
         <section className="flex-1 py-8">

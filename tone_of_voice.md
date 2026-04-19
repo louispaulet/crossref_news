@@ -1,7 +1,7 @@
 # Tone of Voice
 
 Crossref News is an academic briefing, not a magazine or a marketing site.
-The copy should feel calm, precise, and useful.
+The copy should feel precise, neutral, and useful.
 
 ## Voice Principles
 
@@ -22,7 +22,7 @@ The copy should feel calm, precise, and useful.
 
 ## Good Patterns
 
-- `A calm briefing on recent academic work about fraud detection.`
+- `A briefing on recent academic work about fraud detection.`
 - `Showing 18 unique records from 42 Crossref matches.`
 - `No items matched this window. Try a broader term or a wider date range.`
 
