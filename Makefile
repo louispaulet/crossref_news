@@ -7,6 +7,9 @@ BACKEND_PID := $(STATE_DIR)/backend.pid
 FRONTEND_LOG := $(STATE_DIR)/frontend.log
 BACKEND_LOG := $(STATE_DIR)/backend.log
 
+-include $(ROOT_DIR).env
+export VITE_API_BASE_URL OPENAI_API_KEY CLOUDFLARE_API_TOKEN
+
 VITE_BASE_PATH ?= /
 VITE_API_BASE_URL ?=
 

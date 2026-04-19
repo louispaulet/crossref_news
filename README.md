@@ -48,11 +48,13 @@ Logs are written to `.make/frontend.log` and `.make/backend.log`.
 
 The production frontend needs the deployed Worker URL at build time.
 
-Set it first:
+Set it first, either in your shell or in the repo root `.env`:
 
 ```bash
 export VITE_API_BASE_URL="https://<your-worker>.workers.dev"
 ```
+
+The root `.env` can also hold `OPENAI_API_KEY` and `CLOUDFLARE_API_TOKEN` for local tooling. Use `.env.example` as the redacted template.
 
 Then deploy both pieces from the repo root:
 
