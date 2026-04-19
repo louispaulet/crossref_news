@@ -1,0 +1,26 @@
+<svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Crossref News search ornament">
+  <defs>
+    <linearGradient id="lens" x1="76" y1="76" x2="244" y2="244" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8" />
+      <stop offset="1" stop-color="#22C55E" />
+    </linearGradient>
+    <linearGradient id="panel" x1="64" y1="78" x2="224" y2="222" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F172A" />
+      <stop offset="1" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+  <rect x="44" y="44" width="232" height="232" rx="64" fill="url(#panel)" opacity="0.92" />
+  <g fill="none" stroke="rgba(255,255,255,0.18)" stroke-linecap="round">
+    <path d="M88 106h72" />
+    <path d="M88 128h108" />
+    <path d="M88 150h88" />
+    <path d="M88 172h120" />
+    <path d="M88 194h98" />
+  </g>
+  <g>
+    <circle cx="170" cy="160" r="56" fill="none" stroke="url(#lens)" stroke-width="18" />
+    <circle cx="170" cy="160" r="22" fill="rgba(56,189,248,0.12)" />
+    <line x1="208" y1="198" x2="250" y2="240" stroke="#22C55E" stroke-width="22" stroke-linecap="round" />
+  </g>
+  <path d="M142 160l18 18 32-36" fill="none" stroke="#F59E0B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

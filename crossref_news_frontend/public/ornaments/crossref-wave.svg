@@ -1,0 +1,19 @@
+<svg width="640" height="180" viewBox="0 0 640 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Crossref News wave ornament">
+  <defs>
+    <linearGradient id="wave" x1="40" y1="28" x2="608" y2="152" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8" />
+      <stop offset="0.5" stop-color="#A78BFA" />
+      <stop offset="1" stop-color="#22C55E" />
+    </linearGradient>
+  </defs>
+  <path d="M20 128C68 98 118 82 170 82C226 82 266 112 320 112C374 112 416 66 474 66C524 66 574 84 620 104" fill="none" stroke="url(#wave)" stroke-width="12" stroke-linecap="round" />
+  <path d="M20 154C72 132 122 122 176 124C232 126 272 150 322 150C374 150 420 120 476 120C528 120 576 132 620 146" fill="none" stroke="rgba(56,189,248,0.35)" stroke-width="8" stroke-linecap="round" />
+  <g fill="rgba(255,255,255,0.82)">
+    <circle cx="170" cy="82" r="8" />
+    <circle cx="320" cy="112" r="8" />
+    <circle cx="474" cy="66" r="8" />
+    <circle cx="176" cy="124" r="6" />
+    <circle cx="322" cy="150" r="6" />
+    <circle cx="476" cy="120" r="6" />
+  </g>
+</svg>

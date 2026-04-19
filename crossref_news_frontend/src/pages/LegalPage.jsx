@@ -1,14 +1,23 @@
 import SiteFooter from '../components/SiteFooter'
+import PageOrnaments from '../components/PageOrnaments'
 
 function LegalPage({ title, intro, sections, sidebarTitle, sidebarItems }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#07111f] text-slate-100">
+      <PageOrnaments className="opacity-70" />
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.24),_transparent_55%),radial-gradient(circle_at_75%_15%,_rgba(99,102,241,0.18),_transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(7,17,31,1))]" />
       <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6 sm:px-8 lg:px-10">
         <header className="border-b border-white/10 pb-6">
-          <p className="text-xs uppercase tracking-[0.35em] text-sky-300/80">
-            Crossref News
-          </p>
+          <div className="flex items-center gap-4">
+            <img
+              src="/ornaments/crossref-mark.svg"
+              alt=""
+              className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 p-1.5"
+            />
+            <p className="text-xs uppercase tracking-[0.35em] text-sky-300/80">
+              Crossref News
+            </p>
+          </div>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             {title}
           </h1>
