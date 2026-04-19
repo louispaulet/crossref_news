@@ -1,0 +1,4 @@
+name = "crossref-academic-news-poc"
+main = "src/index.js"
+compatibility_date = "2026-04-19"
+
