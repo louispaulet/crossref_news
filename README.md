@@ -1,94 +1,102 @@
 # crossref_news
 
-Academic news using the Crossref REST API.
+Live academic news briefing for fraud detection and related research, powered by the Crossref REST API.
 
-This repo contains a small Python demo that searches recent scholarly metadata
-for fraud-detection-adjacent topics, deduplicates overlapping records, and
-prints a concise briefing in the terminal.
+The repo now ships as a small full-stack app:
 
-It also now includes a Vite + React + Tailwind frontend prototype in
-`crossref_news_frontend/`. That app is a static, backend-agnostic academic news
-landing page for now, so it can be developed before the API is ready.
+- `backend/crossref-worker/` is the Cloudflare Worker API.
+- `crossref_news_frontend/` is the React + Vite frontend.
+- `make up`, `make kill`, and `make deploy` are the repo-level entrypoints.
 
-It also includes a Cloudflare Workers backend POC in
-`backend/crossref-worker/`. That Worker is the backend entrypoint for
-Crossref-backed academic news lookups.
+## What it shows
 
-## Backend
+The current theme focuses on fraud detection in academia, including work around:
 
-The backend uses `wrangler` directly and exposes a JSON API at `GET /news`
-with browser-friendly CORS.
-
-Run it locally with:
-
-```bash
-cd backend/crossref-worker
-npx --yes wrangler dev
-```
-
-Example requests:
-
-```bash
-curl "http://127.0.0.1:8787/news"
-curl "http://127.0.0.1:8787/news?days=14&term=graph%20neural%20networks&term=chargeback%20fraud"
-curl "http://127.0.0.1:8787/news?rowsPerQuery=50&maxResults=15&mailto=you@example.com"
-```
-
-Query params:
-
-- `days`: positive integer, default `7`
-- `rowsPerQuery`: positive integer, default `25`
-- `maxResults`: positive integer, default `25`
-- `mailto`: optional contact email for polite Crossref access
-- `term`: repeatable search term; defaults are the same Crossref fraud-detection-adjacent topics used by the demo
-
-The response includes the search window, effective terms, and normalized
-results deduplicated by DOI/title and sorted by recency and relevance.
-
-## Python Demo
-
-The Python script remains in the repo as a local reference implementation.
-
-## What it looks for
-
-By default the demo searches the last 7 days for combinations of:
-
-- fraud detection
-- credit card fraud
 - XGBoost
-- chargebacks
+- graph-based models
 - payment fraud
-- payment service providers
-- payment processing fraud
-- graph machine learning fraud
+- chargebacks
+- anomaly detection
 
-The output is deduplicated by DOI and normalized title so a preprint and its
-published version collapse into one briefing entry when possible.
+The theme system is config-driven so more academic-news categories can be added later without rebuilding the app structure.
 
-## Run it
+## Local development
 
-```bash
-python3 crossref_news_demo.py
-```
-
-Useful options:
+Start both services from the repo root:
 
 ```bash
-python3 crossref_news_demo.py --days 14
-python3 crossref_news_demo.py --term "graph neural networks" --term "chargeback fraud"
-python3 crossref_news_demo.py --rows-per-query 50 --max-results 15
-python3 crossref_news_demo.py --mailto you@example.com
+make up
 ```
 
-## Notes
+This starts:
 
-- The script uses only the Python standard library.
-- The backend is intentionally lightweight and dependency-free beyond `wrangler`.
-- Crossref politely prefers contact info in requests, so `--mailto` or
-  `CROSSREF_MAILTO` is recommended.
-- Search results are metadata-only and may vary depending on how publishers
-  expose titles, dates, abstracts, and links in Crossref.
-- The frontend prototype currently uses mocked article cards and no live API
-  calls.
-- Cloudflare authentication is not configured on this machine yet, so run
-  `wrangler login` before attempting to deploy.
+- the frontend on [http://127.0.0.1:5173](http://127.0.0.1:5173)
+- the Worker on [http://127.0.0.1:8787](http://127.0.0.1:8787)
+
+The frontend uses a Vite proxy at `/api` in development, so it can talk to the Worker without any manual URL setup.
+
+Stop both services with:
+
+```bash
+make kill
+```
+
+Logs are written to `.make/frontend.log` and `.make/backend.log`.
+
+## Deploy
+
+The production frontend needs the deployed Worker URL at build time.
+
+Set it first:
+
+```bash
+export VITE_API_BASE_URL="https://<your-worker>.workers.dev"
+```
+
+Then deploy both pieces from the repo root:
+
+```bash
+make deploy
+```
+
+`make deploy` does three things:
+
+1. builds the frontend for GitHub Pages with `VITE_BASE_PATH=/crossref_news/`
+2. publishes the static frontend build with `gh-pages`
+3. deploys the Worker with `wrangler deploy`
+
+The frontend uses `HashRouter`, so GitHub Pages can serve deep links without
+needing custom server rewrite rules.
+
+If your GitHub Pages project path changes, override `VITE_BASE_PATH` before running the deploy command.
+
+## Backend API
+
+The Worker exposes:
+
+- `GET /` for service metadata and theme configuration
+- `GET /news` for the briefing data
+
+Useful query params:
+
+- `theme`: theme id, default `fraud-detection`
+- `from` / `to`: optional ISO dates in `YYYY-MM-DD` format
+- `days`: fallback sliding window, default `7`
+- `term`: repeatable extra query term
+- `rowsPerQuery`: Crossref rows per term, default `25`
+- `maxResults`: maximum deduplicated results, default `25`
+- `mailto`: optional contact email for polite Crossref access
+
+Example:
+
+```bash
+curl "http://127.0.0.1:8787/news?theme=fraud-detection&from=2026-04-01&to=2026-04-19&term=xgboost"
+```
+
+## Repository notes
+
+- Keep the demo lightweight and stdlib-first unless there is a strong reason not to.
+- Keep the frontend/backend changes aligned when the API shape changes.
+- Update this README whenever the runtime workflow, command entrypoints, or deployment assumptions change.
+- The frontend uses `gh-pages` for publishing and `wrangler` for Worker deployment.
+- Cloudflare authentication still needs to be available locally before `wrangler deploy` will succeed.

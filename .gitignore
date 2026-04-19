@@ -201,6 +201,9 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Local make/runtime state
+.make/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
