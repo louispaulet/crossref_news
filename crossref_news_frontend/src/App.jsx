@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import SiteFooter from './components/SiteFooter'
 
 const FALLBACK_THEMES = [
   {
@@ -21,7 +22,7 @@ const FALLBACK_THEMES = [
 ]
 
 const FALLBACK_CONFIG = {
-  service: 'crossref-academic-news-poc',
+  service: 'Crossref News',
   defaultTheme: 'fraud-detection',
   themes: FALLBACK_THEMES,
   endpoints: {
@@ -149,7 +150,7 @@ function App() {
   const [articles, setArticles] = useState([])
   const [windowInfo, setWindowInfo] = useState(initialWindow)
   const [queryInfo, setQueryInfo] = useState(null)
-  const [backendNote, setBackendNote] = useState('Loading live Crossref news...')
+  const [backendNote, setBackendNote] = useState('Loading live Crossref briefing...')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchRequestId, setSearchRequestId] = useState(1)
@@ -169,8 +170,8 @@ function App() {
       if (!apiBaseUrl && !import.meta.env.DEV) {
         if (alive) {
           setBackendNote((current) =>
-            current === 'Loading live Crossref news...'
-              ? 'Set VITE_API_BASE_URL before building for GitHub Pages.'
+            current === 'Loading live Crossref briefing...'
+              ? 'Set `VITE_API_BASE_URL` before building for GitHub Pages.'
               : current,
           )
         }
@@ -188,7 +189,8 @@ function App() {
           return
         }
 
-        const normalizedThemes = Array.isArray(data.themes) && data.themes.length > 0 ? data.themes : FALLBACK_THEMES
+        const normalizedThemes =
+          Array.isArray(data.themes) && data.themes.length > 0 ? data.themes : FALLBACK_THEMES
 
         setConfig({
           ...FALLBACK_CONFIG,
@@ -206,7 +208,7 @@ function App() {
             : resolvedDefaultThemeId,
         )
         setBackendNote((current) =>
-          current === 'Loading live Crossref news...'
+          current === 'Loading live Crossref briefing...'
             ? `Connected to ${data.service || FALLBACK_CONFIG.service}.`
             : current,
         )
@@ -217,7 +219,7 @@ function App() {
 
         setConfig(FALLBACK_CONFIG)
         setBackendNote((current) =>
-          current === 'Loading live Crossref news...'
+          current === 'Loading live Crossref briefing...'
             ? 'Using the built-in fraud-detection preset until the backend responds.'
             : current,
         )
@@ -237,7 +239,7 @@ function App() {
     async function loadNews() {
       if (!apiBaseUrl && !import.meta.env.DEV) {
         setLoading(false)
-        setError('Set VITE_API_BASE_URL before building for GitHub Pages.')
+        setError('Set `VITE_API_BASE_URL` before building for GitHub Pages.')
         return
       }
 
@@ -286,7 +288,7 @@ function App() {
           count: data.count ?? 0,
           rawCount: data.rawCount ?? 0,
         })
-        setBackendNote(`Showing ${data.count ?? 0} deduplicated results from ${data.source || 'Crossref'}.`)
+        setBackendNote(`Showing ${data.count ?? 0} deduplicated records from ${data.source || 'Crossref'}.`)
       } catch (fetchError) {
         if (!alive) {
           return
@@ -294,7 +296,7 @@ function App() {
 
         setArticles([])
         setQueryInfo(null)
-        setError(fetchError instanceof Error ? fetchError.message : 'Failed to load news')
+        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load the briefing.')
         setBackendNote('The Worker API is reachable, but this query did not complete.')
       } finally {
         if (alive) {
@@ -308,7 +310,7 @@ function App() {
     return () => {
       alive = false
     }
-  }, [apiBaseUrl, searchRequestId])
+  }, [apiBaseUrl, activeTheme, extraTerms, fromDate, toDate, searchRequestId])
 
   const themeOptions = themes.map((theme) => ({
     ...theme,
@@ -326,7 +328,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#07111f] text-slate-100">
+    <div className="relative min-h-screen overflow-hidden bg-[#07111f] text-slate-100">
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.24),_transparent_55%),radial-gradient(circle_at_75%_15%,_rgba(99,102,241,0.18),_transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(7,17,31,1))]" />
       <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
         <header className="flex flex-col gap-5 border-b border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
@@ -335,19 +337,19 @@ function App() {
               Crossref News
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
-              Academic news on fraud detection, surfaced as a live briefing.
+              A calm briefing on recent academic work about fraud detection.
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              Search recent Crossref metadata for fraud detection, XGBoost, graph
-              models, and adjacent academic work. The current release is built to
-              grow into more themes later without reworking the interface.
+              Search recent Crossref metadata for fraud detection, anomaly detection,
+              XGBoost, graph methods, and adjacent work. The interface stays narrow so
+              the evidence stays easy to read.
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300 shadow-xl shadow-slate-950/20 backdrop-blur">
             <div className="flex items-center justify-between gap-6">
-              <span>Backend</span>
-              <span className="font-medium text-sky-200">Worker + gh-pages</span>
+              <span>Delivery</span>
+              <span className="font-medium text-sky-200">Worker + GitHub Pages</span>
             </div>
             <div className="mt-2 text-xs uppercase tracking-[0.25em] text-slate-500">
               {config.service || FALLBACK_CONFIG.service}
@@ -359,17 +361,17 @@ function App() {
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-slate-950/25 backdrop-blur">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-sky-100">
-                Live Crossref briefing
+                Live briefing
               </span>
               <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1 text-xs text-slate-300">
-                {loading ? 'Refreshing now' : 'Ready'}
+                {loading ? 'Refreshing' : 'Ready'}
               </span>
             </div>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                 <div className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Active theme
+                  Theme
                 </div>
                 <div className="mt-2 text-lg font-semibold text-white">{activeTheme.label}</div>
               </div>
@@ -397,9 +399,9 @@ function App() {
           <aside className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-slate-950/25 backdrop-blur">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-white">Current theme config</h2>
+                <h2 className="text-lg font-semibold text-white">Theme profile</h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  Ready for additional categories later.
+                  Ready for other themes when the catalog grows.
                 </p>
               </div>
               <button
@@ -407,7 +409,7 @@ function App() {
                 onClick={handleReset}
                 className="rounded-full border border-white/10 bg-slate-950/50 px-3 py-2 text-sm text-slate-300 transition hover:border-sky-400/30 hover:text-white"
               >
-                Reset
+                Reset filters
               </button>
             </div>
 
@@ -462,7 +464,7 @@ function App() {
 
             <label className="space-y-2">
               <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                Extra query terms
+                Additional terms
               </span>
               <input
                 value={extraTerms}
@@ -498,20 +500,20 @@ function App() {
                 disabled={loading}
                 className="w-full rounded-2xl bg-sky-400 px-4 py-3 font-medium text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-sky-400/60"
               >
-                {loading ? 'Searching...' : 'Search'}
+                {loading ? 'Updating...' : 'Update briefing'}
               </button>
             </div>
           </form>
 
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-400">
             <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              Theme-driven defaults
+              Theme defaults
             </span>
             <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              Custom date range
+              Date range optional
             </span>
             <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              Extra terms are appended to the theme preset
+              Extra terms are appended
             </span>
           </div>
         </section>
@@ -519,11 +521,11 @@ function App() {
         <section className="flex-1 py-8">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold text-white">Latest results</h2>
+              <h2 className="text-2xl font-semibold text-white">Latest records</h2>
               <p className="mt-1 text-sm text-slate-400">
                 {queryInfo
-                  ? `Found ${queryInfo.count} deduplicated records from ${queryInfo.rawCount} raw matches.`
-                  : 'Run a search to populate the briefing.'}
+                  ? `Found ${queryInfo.count} deduplicated records from ${queryInfo.rawCount} raw Crossref matches.`
+                  : 'Run a search to load the briefing.'}
               </p>
             </div>
             <div className="text-sm text-slate-400">
@@ -539,8 +541,7 @@ function App() {
 
           {!loading && articles.length === 0 ? (
             <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-300">
-              No matching items were found for this window. Try a broader term or a
-              wider date range.
+              No items matched this window. Try a broader term or a wider date range.
             </div>
           ) : null}
 
@@ -597,7 +598,7 @@ function App() {
                   </div>
 
                   <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-slate-400">
-                    <span>{article.venue || 'Venue unknown'}</span>
+                    <span>{article.venue || 'Venue not listed'}</span>
                     {article.url ? (
                       <a
                         href={article.url}
@@ -605,11 +606,11 @@ function App() {
                         rel="noreferrer"
                         className="inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-400/10 px-4 py-2 font-medium text-sky-200 transition hover:border-sky-300/60 hover:bg-sky-400/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
                       >
-                        Read more
+                        Open record
                         <span aria-hidden="true">→</span>
                       </a>
                     ) : (
-                      <span className="text-slate-500">No URL</span>
+                      <span className="text-slate-500">No link available</span>
                     )}
                   </div>
                 </article>
@@ -617,6 +618,8 @@ function App() {
             </div>
           ) : null}
         </section>
+
+        <SiteFooter />
       </main>
     </div>
   )

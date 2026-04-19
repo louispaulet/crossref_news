@@ -78,7 +78,7 @@ function normalizeDoi(value) {
 }
 
 function buildUserAgent(mailto) {
-  const base = "crossref-academic-news-poc/1.0";
+  const base = "crossref-news/1.0";
   return mailto ? `${base} (mailto:${mailto})` : base;
 }
 
@@ -597,7 +597,7 @@ async function buildNewsPayload(url) {
 
 function landingResponse(url) {
   return jsonResponse({
-    service: "crossref-academic-news-poc",
+    service: "Crossref News",
     defaultTheme: DEFAULT_THEME_ID,
     themes: Object.values(THEMES).map((theme) => ({
       id: theme.id,

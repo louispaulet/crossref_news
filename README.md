@@ -7,6 +7,7 @@ The repo now ships as a small full-stack app:
 - `backend/crossref-worker/` is the Cloudflare Worker API.
 - `crossref_news_frontend/` is the React + Vite frontend.
 - `make up`, `make kill`, and `make deploy` are the repo-level entrypoints.
+- Before adding or editing frontend text, read `tone_of_voice.md` first.
 
 ## What it shows
 
