@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import PageOrnaments from './components/PageOrnaments'
 import SiteFooter from './components/SiteFooter'
 
@@ -81,6 +81,19 @@ const NO_THEME_OPTION = {
 
 const DEFAULT_PAGE_SIZE = 10
 const DEFAULT_MAX_VISIBLE = 50
+const EXEC_SUMMARY_TIMEOUT_MS = 120000
+const EXEC_SUMMARY_FIRST_PHASE_MS = 60000
+const EXEC_SUMMARY_TICK_MS = 500
+const EXEC_SUMMARY_PROGRESS_CAP = 98.4
+const EXEC_SUMMARY_SLOW_MESSAGE = "sorry, we're slow today..."
+const EXEC_SUMMARY_LOADING_MESSAGES = [
+  'Checking whether the signal converges.',
+  'Waiting for the citation dust to settle.',
+  'Letting the abstract reactor finish warming up.',
+  'Measuring the signal-to-noise ratio.',
+  'Crossref metadata is still doing the math.',
+  'The summary centrifuge is still spinning.',
+]
 
 const FALLBACK_CONFIG = {
   service: 'Crossref News',
@@ -97,7 +110,19 @@ function getApiBaseUrl() {
     return '/api'
   }
 
-  return import.meta.env.VITE_API_BASE_URL?.trim() || ''
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || ''
+  if (configuredBaseUrl) {
+    return configuredBaseUrl
+  }
+
+  if (typeof window !== 'undefined') {
+    const { hostname } = window.location
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      return 'http://127.0.0.1:8787'
+    }
+  }
+
+  return ''
 }
 
 function joinUrl(base, path) {
@@ -113,6 +138,51 @@ function joinUrl(base, path) {
   }
 
   return `${base.replace(/\/$/, '')}${normalizedPath}`
+}
+
+function getExecsumProgress(elapsedMs, currentProgress) {
+  if (elapsedMs <= EXEC_SUMMARY_FIRST_PHASE_MS) {
+    const phaseProgress = 4 + (elapsedMs / EXEC_SUMMARY_FIRST_PHASE_MS) * 56
+    return Math.max(currentProgress, Math.min(phaseProgress, 60))
+  }
+
+  const lateElapsedMs = elapsedMs - EXEC_SUMMARY_FIRST_PHASE_MS
+  const lateRatio = Math.min(lateElapsedMs / EXEC_SUMMARY_FIRST_PHASE_MS, 1)
+  const baseProgress = 60 + lateRatio * 34.5
+  const randomBoost = (1 - lateRatio) * (0.6 + Math.random() * 2.1) + Math.random() * 0.35
+  const drift = 0.2 + Math.random() * (1.4 - lateRatio)
+  const nextProgress = Math.max(currentProgress + drift, baseProgress + randomBoost)
+
+  return Math.min(EXEC_SUMMARY_PROGRESS_CAP, nextProgress)
+}
+
+function getExecsumLoadingMessage(elapsedMs) {
+  const segment = Math.floor(elapsedMs / 7000)
+  return EXEC_SUMMARY_LOADING_MESSAGES[segment % EXEC_SUMMARY_LOADING_MESSAGES.length]
+}
+
+async function readJsonResponse(response, sourceLabel) {
+  const rawBody = await response.text()
+  const trimmedBody = rawBody.trim()
+
+  if (!trimmedBody) {
+    throw new Error(`${sourceLabel} returned an empty response.`)
+  }
+
+  try {
+    return JSON.parse(trimmedBody)
+  } catch {
+    const lowerBody = trimmedBody.toLowerCase()
+    const looksLikeHtml =
+      lowerBody.startsWith('<!doctype html') || lowerBody.startsWith('<html') || lowerBody.startsWith('<')
+    if (looksLikeHtml) {
+      throw new Error(
+        `${sourceLabel} returned HTML instead of JSON. Check the API base URL or the dev proxy.`,
+      )
+    }
+
+    throw new Error(`${sourceLabel} returned invalid JSON.`)
+  }
 }
 
 function toLocalDateInput(date) {
@@ -277,11 +347,15 @@ function App() {
   const [summaryNote, setSummaryNote] = useState('Executive summary will appear after the search loads.')
   const [loading, setLoading] = useState(true)
   const [summaryLoading, setSummaryLoading] = useState(true)
+  const [summaryPhase, setSummaryPhase] = useState('loading')
+  const [summaryProgress, setSummaryProgress] = useState(4)
+  const [summaryElapsedMs, setSummaryElapsedMs] = useState(0)
   const [error, setError] = useState('')
   const [summaryError, setSummaryError] = useState('')
   const [visibleCount, setVisibleCount] = useState(DEFAULT_PAGE_SIZE)
   const [newsPageSize, setNewsPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [searchRequestId, setSearchRequestId] = useState(1)
+  const summaryRunIdRef = useRef(0)
 
   const themes = config.themes?.length > 0 ? config.themes : FALLBACK_THEMES
   const defaultThemeId = resolveThemeId(themes, config.defaultTheme)
@@ -294,6 +368,7 @@ function App() {
   const isNoTheme = selectedTheme === NO_THEME_OPTION.id
   const visibleArticles = articles.slice(0, Math.min(visibleCount, DEFAULT_MAX_VISIBLE))
   const hiddenCount = Math.max(articles.length - visibleArticles.length, 0)
+  const summaryTimedOut = summaryPhase === 'timed_out'
 
   useEffect(() => {
     let alive = true
@@ -316,7 +391,7 @@ function App() {
           throw new Error(`HTTP ${response.status}`)
         }
 
-        const data = await response.json()
+        const data = await readJsonResponse(response, 'Configuration endpoint')
         if (!alive) {
           return
         }
@@ -416,7 +491,7 @@ function App() {
 
       try {
         const response = await fetch(joinUrl(apiBaseUrl, `/news?${request.params.toString()}`))
-        const data = await response.json()
+        const data = await readJsonResponse(response, 'Crossref results endpoint')
 
         if (!alive) {
           return
@@ -475,11 +550,43 @@ function App() {
 
   useEffect(() => {
     let alive = true
+    let settled = false
+    let timedOut = false
+    let progressIntervalId = null
+    let timeoutId = null
+    const controller = new AbortController()
+    const requestId = summaryRunIdRef.current + 1
+
+    summaryRunIdRef.current = requestId
+
+    function clearSummaryTimers() {
+      if (progressIntervalId !== null) {
+        window.clearInterval(progressIntervalId)
+        progressIntervalId = null
+      }
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+        timeoutId = null
+      }
+    }
+
+    function settleSummary(nextPhase, nextNote, nextError = '') {
+      if (!alive || settled) {
+        return
+      }
+
+      settled = true
+      clearSummaryTimers()
+      setSummaryPhase(nextPhase)
+      setSummaryLoading(nextPhase === 'loading')
+      setSummaryError(nextError)
+      setSummaryNote(nextNote)
+    }
 
     async function loadSummary() {
       if (!apiBaseUrl && !import.meta.env.DEV) {
-        setSummaryLoading(false)
-        setSummaryError('Set `VITE_API_BASE_URL` before building for GitHub Pages.')
+        settleSummary('error', 'Set `VITE_API_BASE_URL` before building for GitHub Pages.', 'Set `VITE_API_BASE_URL` before building for GitHub Pages.')
         return
       }
 
@@ -493,24 +600,55 @@ function App() {
       })
 
       if (request.error) {
-        setSummaryLoading(false)
+        settleSummary('error', request.error, request.error)
         setSummary(null)
-        setSummaryError(request.error)
-        setSummaryNote(request.error)
         setForceRefresh(false)
         return
       }
 
-      setSummaryLoading(true)
+      setSummaryPhase('loading')
+      setSummaryProgress(4)
+      setSummaryElapsedMs(0)
       setSummaryError('')
       setSummary(null)
       setSummaryNote('Generating executive summary...')
+      setSummaryLoading(true)
+
+      const startedAt = Date.now()
+
+      progressIntervalId = window.setInterval(() => {
+        if (!alive || settled || timedOut) {
+          return
+        }
+
+        const elapsedMs = Date.now() - startedAt
+        setSummaryElapsedMs(elapsedMs)
+        setSummaryProgress((currentProgress) => getExecsumProgress(elapsedMs, currentProgress))
+      }, EXEC_SUMMARY_TICK_MS)
+
+      timeoutId = window.setTimeout(() => {
+        if (!alive || settled) {
+          return
+        }
+
+        timedOut = true
+        controller.abort()
+        clearSummaryTimers()
+        setSummaryPhase('timed_out')
+        setSummaryLoading(false)
+        setSummaryProgress(0)
+        setSummaryElapsedMs(EXEC_SUMMARY_TIMEOUT_MS)
+        setSummaryError('')
+        setSummaryNote(EXEC_SUMMARY_SLOW_MESSAGE)
+      }, EXEC_SUMMARY_TIMEOUT_MS)
 
       try {
-        const response = await fetch(joinUrl(apiBaseUrl, `/execsum?${request.params.toString()}`))
-        const data = await response.json()
+        const response = await fetch(joinUrl(apiBaseUrl, `/execsum?${request.params.toString()}`), {
+          signal: controller.signal,
+        })
+        const data = await readJsonResponse(response, 'Executive summary endpoint')
 
-        if (!alive) {
+        if (!alive || settled || timedOut || summaryRunIdRef.current !== requestId) {
           return
         }
 
@@ -518,22 +656,31 @@ function App() {
           throw new Error(data?.error || `HTTP ${response.status}`)
         }
 
+        settled = true
+        clearSummaryTimers()
         setSummary(data)
+        setSummaryPhase('ready')
+        setSummaryLoading(false)
+        setSummaryProgress(100)
+        setSummaryElapsedMs(Date.now() - startedAt)
+        setSummaryError('')
         setSummaryNote(
           `${request.params.get('refresh') ? 'Forced refresh.' : data.cache?.hit ? 'Using cached executive summary.' : 'Generated a fresh executive summary.'}`,
         )
       } catch (fetchError) {
-        if (!alive) {
+        if (!alive || settled || timedOut || summaryRunIdRef.current !== requestId || controller.signal.aborted) {
           return
         }
 
+        settled = true
+        clearSummaryTimers()
         setSummary(null)
+        setSummaryPhase('error')
+        setSummaryLoading(false)
+        setSummaryProgress(0)
+        setSummaryElapsedMs(0)
         setSummaryError(fetchError instanceof Error ? fetchError.message : 'Unable to generate the executive summary.')
         setSummaryNote('Executive summary unavailable.')
-      } finally {
-        if (alive) {
-          setSummaryLoading(false)
-        }
       }
     }
 
@@ -541,6 +688,8 @@ function App() {
 
     return () => {
       alive = false
+      controller.abort()
+      clearSummaryTimers()
     }
   }, [apiBaseUrl, searchRequestId])
 
@@ -767,11 +916,44 @@ function App() {
             ) : null}
 
             {summaryLoading ? (
-              <div className="mt-5 space-y-3">
-                <div className="h-4 w-3/4 animate-pulse rounded-full bg-white/10" />
-                <div className="h-4 w-full animate-pulse rounded-full bg-white/10" />
-                <div className="h-4 w-11/12 animate-pulse rounded-full bg-white/10" />
-                <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/10" />
+              <div className="mt-5 space-y-4">
+                <div
+                  className="summary-progress-shell"
+                  role="progressbar"
+                  aria-label="Executive summary loading progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(summaryProgress)}
+                  aria-valuetext={`Executive summary loading, ${Math.round(summaryProgress)} percent`}
+                >
+                  <div
+                    className="summary-progress-fill"
+                    style={{ width: `${summaryProgress}%` }}
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <p className="text-sm leading-6 text-slate-300">
+                    {getExecsumLoadingMessage(summaryElapsedMs)}
+                  </p>
+                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                    {Math.round(summaryProgress)}%
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {summaryTimedOut ? (
+              <div
+                className="mt-5 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 text-sm leading-6 text-slate-300"
+                role="status"
+                aria-live="polite"
+              >
+                <span>{EXEC_SUMMARY_SLOW_MESSAGE.slice(0, -3)}</span>
+                <span className="summary-slow-dots" aria-hidden="true">
+                  <span className="summary-slow-dot">.</span>
+                  <span className="summary-slow-dot">.</span>
+                  <span className="summary-slow-dot">.</span>
+                </span>
               </div>
             ) : null}
 

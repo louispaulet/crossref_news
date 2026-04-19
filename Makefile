@@ -20,7 +20,7 @@ up:
 	@sh -c 'set -e; \
 		npm --prefix "$(FRONTEND_DIR)" run dev:host >"$(FRONTEND_LOG)" 2>&1 & \
 		FRONTEND_PID=$$!; \
-		cd "$(WORKER_DIR)" && npx --yes wrangler dev --port 8787 >"$(BACKEND_LOG)" 2>&1 & \
+		cd "$(WORKER_DIR)" && npx --yes wrangler dev --port 8787 --env-file "$(ROOT_DIR).env" >"$(BACKEND_LOG)" 2>&1 & \
 		BACKEND_PID=$$!; \
 		printf "%s\n" "$$FRONTEND_PID" >"$(FRONTEND_PID)"; \
 		printf "%s\n" "$$BACKEND_PID" >"$(BACKEND_PID)"; \
