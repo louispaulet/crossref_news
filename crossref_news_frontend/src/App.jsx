@@ -520,7 +520,7 @@ function App() {
               {articles.map((article) => (
                 <article
                   key={`${article.doi || article.title}-${article.published}`}
-                  className="group rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-lg shadow-slate-950/20 transition hover:-translate-y-1 hover:border-sky-400/30"
+                  className="rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-lg shadow-slate-950/20"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <span className="rounded-full bg-sky-400/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-sky-200">
@@ -557,9 +557,10 @@ function App() {
                         href={article.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-sky-300 transition group-hover:text-sky-200"
+                        className="inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-400/10 px-4 py-2 font-medium text-sky-200 transition hover:border-sky-300/60 hover:bg-sky-400/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
                       >
                         Read more
+                        <span aria-hidden="true">→</span>
                       </a>
                     ) : (
                       <span className="text-slate-500">No URL</span>
