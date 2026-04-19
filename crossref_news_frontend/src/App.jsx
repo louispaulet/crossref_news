@@ -19,6 +19,55 @@ const FALLBACK_THEMES = [
     ],
     defaultDays: 7,
   },
+  {
+    id: 'credit-card-fraud',
+    label: 'Credit card fraud',
+    description: 'Academic work on credit card fraud detection, transactions, and payment abuse.',
+    terms: ['credit card fraud'],
+    defaultDays: 7,
+  },
+  {
+    id: 'xgboost-fraud',
+    label: 'XGBoost fraud',
+    description: 'Academic work on fraud detection methods using XGBoost and related models.',
+    terms: ['xgboost fraud'],
+    defaultDays: 7,
+  },
+  {
+    id: 'chargeback',
+    label: 'Chargeback',
+    description: 'Academic work on chargeback disputes, reversal processes, and payment operations.',
+    terms: ['chargeback'],
+    defaultDays: 7,
+  },
+  {
+    id: 'payment-fraud',
+    label: 'Payment fraud',
+    description: 'Academic work on payment fraud, fraud controls, and transaction risk.',
+    terms: ['payment fraud'],
+    defaultDays: 7,
+  },
+  {
+    id: 'payment-service-provider',
+    label: 'Payment service provider',
+    description: 'Academic work on payment service providers, fraud controls, and related operations.',
+    terms: ['payment service provider'],
+    defaultDays: 7,
+  },
+  {
+    id: 'payment-processing-fraud',
+    label: 'Payment processing fraud',
+    description: 'Academic work on payment processing fraud and transaction monitoring.',
+    terms: ['payment processing fraud'],
+    defaultDays: 7,
+  },
+  {
+    id: 'graph-machine-learning-fraud',
+    label: 'Graph machine learning fraud',
+    description: 'Academic work on graph machine learning methods for fraud detection.',
+    terms: ['graph machine learning fraud'],
+    defaultDays: 7,
+  },
 ]
 
 const FALLBACK_CONFIG = {
@@ -142,6 +191,14 @@ function formatPublishedDate(value) {
 function App() {
   const apiBaseUrl = getApiBaseUrl()
   const initialWindow = createDefaultWindow(7)
+  const buttonBaseClass =
+    'inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-2 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950'
+  const secondaryButtonClass =
+    `${buttonBaseClass} border border-white/10 bg-slate-950/50 text-slate-300 hover:border-sky-400/30 hover:text-white focus-visible:ring-sky-300/60`
+  const primaryButtonClass =
+    `${buttonBaseClass} bg-sky-400 text-slate-950 hover:bg-sky-300 focus-visible:ring-sky-300/60`
+  const recordButtonClass =
+    `${buttonBaseClass} shrink-0 gap-2 border border-sky-400/30 bg-sky-400/10 text-sky-200 hover:border-sky-300/60 hover:bg-sky-400/20 hover:text-white focus-visible:ring-sky-300/60`
   const [config, setConfig] = useState(FALLBACK_CONFIG)
   const [selectedTheme, setSelectedTheme] = useState(FALLBACK_CONFIG.defaultTheme)
   const [extraTerms, setExtraTerms] = useState('')
@@ -405,13 +462,13 @@ function App() {
               <div>
                 <h2 className="text-lg font-semibold text-white">Theme profile</h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  Ready for other themes when the catalog grows.
+                  Theme presets available in the dropdown.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleReset}
-                className="rounded-full border border-white/10 bg-slate-950/50 px-3 py-2 text-sm text-slate-300 transition hover:border-sky-400/30 hover:text-white"
+                className={secondaryButtonClass}
               >
                 Reset filters
               </button>
@@ -516,7 +573,7 @@ function App() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-2xl bg-sky-400 px-4 py-3 font-medium text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-sky-400/60"
+                className={`${primaryButtonClass} w-full rounded-2xl py-3 disabled:cursor-not-allowed disabled:bg-sky-400/60`}
               >
                 {loading ? 'Updating...' : 'Update briefing'}
               </button>
@@ -622,7 +679,7 @@ function App() {
                         href={article.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-400/10 px-4 py-2 font-medium text-sky-200 transition hover:border-sky-300/60 hover:bg-sky-400/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+                        className={recordButtonClass}
                       >
                         Open record
                         <span aria-hidden="true">→</span>

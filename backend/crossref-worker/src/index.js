@@ -2,6 +2,7 @@ const API_URL = "https://api.crossref.org/works";
 const DEFAULT_DAYS = 7;
 const DEFAULT_ROWS_PER_QUERY = 25;
 const DEFAULT_MAX_RESULTS = 25;
+const DEFAULT_THEME_ID = "fraud-detection";
 const DEFAULT_TERMS = [
   "fraud detection",
   "credit card fraud",
@@ -12,15 +13,66 @@ const DEFAULT_TERMS = [
   "payment processing fraud",
   "graph machine learning fraud",
 ];
-const DEFAULT_THEME_ID = "fraud-detection";
-const THEMES = {
-  [DEFAULT_THEME_ID]: {
-    id: DEFAULT_THEME_ID,
-    label: "Fraud detection",
-    description: "Academic work on fraud detection, anomaly detection, XGBoost, and graph-based models.",
-    terms: DEFAULT_TERMS,
+
+function createTheme(id, label, terms, description) {
+  return {
+    id,
+    label,
+    description,
+    terms,
     defaultDays: DEFAULT_DAYS,
-  },
+  };
+}
+
+const THEMES = {
+  [DEFAULT_THEME_ID]: createTheme(
+    DEFAULT_THEME_ID,
+    "Fraud detection",
+    DEFAULT_TERMS,
+    "Academic work on fraud detection, anomaly detection, XGBoost, and graph-based models.",
+  ),
+  "credit-card-fraud": createTheme(
+    "credit-card-fraud",
+    "Credit card fraud",
+    ["credit card fraud"],
+    "Academic work on credit card fraud detection, transactions, and payment abuse.",
+  ),
+  "xgboost-fraud": createTheme(
+    "xgboost-fraud",
+    "XGBoost fraud",
+    ["xgboost fraud"],
+    "Academic work on fraud detection methods using XGBoost and related models.",
+  ),
+  chargeback: createTheme(
+    "chargeback",
+    "Chargeback",
+    ["chargeback"],
+    "Academic work on chargeback disputes, reversal processes, and payment operations.",
+  ),
+  "payment-fraud": createTheme(
+    "payment-fraud",
+    "Payment fraud",
+    ["payment fraud"],
+    "Academic work on payment fraud, fraud controls, and transaction risk.",
+  ),
+  "payment-service-provider": createTheme(
+    "payment-service-provider",
+    "Payment service provider",
+    ["payment service provider"],
+    "Academic work on payment service providers, fraud controls, and related operations.",
+  ),
+  "payment-processing-fraud": createTheme(
+    "payment-processing-fraud",
+    "Payment processing fraud",
+    ["payment processing fraud"],
+    "Academic work on payment processing fraud and transaction monitoring.",
+  ),
+  "graph-machine-learning-fraud": createTheme(
+    "graph-machine-learning-fraud",
+    "Graph machine learning fraud",
+    ["graph machine learning fraud"],
+    "Academic work on graph machine learning methods for fraud detection.",
+  ),
 };
 
 const TYPE_PRIORITY = new Map([
