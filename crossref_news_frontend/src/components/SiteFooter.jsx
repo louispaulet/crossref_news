@@ -9,18 +9,10 @@ const footerLinks = [
 function SiteFooter() {
   return (
     <footer className="mt-10 border-t border-white/10 pt-6 text-sm text-slate-400">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex max-w-2xl items-start gap-4">
-          <img
-            src="/ornaments/crossref-wave.svg"
-            alt=""
-            className="mt-1 hidden h-10 w-28 shrink-0 opacity-60 lg:block"
-          />
-          <p className="leading-6 text-slate-400">
-            Crossref News surfaces recent academic metadata with a narrow, readable
-            focus. It is built for scanning, not for noise.
-          </p>
-        </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="max-w-2xl leading-6 text-slate-400">
+          Recent Crossref metadata for a small set of research themes.
+        </p>
 
         <nav aria-label="Footer">
           <ul className="flex flex-wrap gap-4">

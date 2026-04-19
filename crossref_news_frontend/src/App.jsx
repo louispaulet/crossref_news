@@ -555,14 +555,14 @@ function App() {
     <div className="relative min-h-screen overflow-hidden bg-[#07111f] text-slate-100">
       <PageOrnaments />
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.24),_transparent_55%),radial-gradient(circle_at_75%_15%,_rgba(99,102,241,0.18),_transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(7,17,31,1))]" />
-      <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-        <header className="grid gap-6 border-b border-white/10 pb-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-4 py-5 sm:px-6 lg:px-8">
+        <header className="border-b border-white/10 pb-5">
           <div className="max-w-3xl space-y-3">
             <div className="flex items-center gap-4">
               <img
                 src="/ornaments/crossref-mark.svg"
                 alt=""
-                className="h-12 w-12 shrink-0 rounded-2xl border border-white/10 bg-white/5 p-1.5 shadow-lg shadow-slate-950/20"
+                className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/5 p-1.5 shadow-lg shadow-slate-950/20"
               />
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-sky-300/80">
@@ -582,39 +582,18 @@ function App() {
               filters and extra terms.
             </p>
           </div>
-
-          <aside className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl shadow-slate-950/25 backdrop-blur">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_60%),radial-gradient(circle_at_bottom_right,_rgba(34,197,94,0.16),_transparent_44%)]" />
-            <div className="relative grid gap-4">
-              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Visual layer
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Lightweight SVG ornaments add motion without changing the reading flow.
-                </p>
-              </div>
-              <img
-                src="/ornaments/crossref-lens.svg"
-                alt=""
-                className="mx-auto w-full max-w-[18rem] opacity-90 drop-shadow-2xl"
-              />
-            </div>
-          </aside>
         </header>
 
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-6">
+        <section className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5">
           <form
-            className="grid gap-4 lg:grid-cols-[1.2fr_1.1fr_0.8fr_0.8fr_auto]"
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_1.1fr_0.8fr_0.8fr_auto]"
             onSubmit={(event) => {
               event.preventDefault()
               setSearchRequestId((value) => value + 1)
             }}
           >
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                Theme
-              </span>
+              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">Theme</span>
               <select
                 id="theme"
                 name="theme"
@@ -645,9 +624,7 @@ function App() {
             </label>
 
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                From
-              </span>
+              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">From</span>
               <input
                 id="from-date"
                 name="from-date"
@@ -659,9 +636,7 @@ function App() {
             </label>
 
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                To
-              </span>
+              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">To</span>
               <input
                 id="to-date"
                 name="to-date"
@@ -672,7 +647,7 @@ function App() {
               />
             </label>
 
-            <div className="flex items-end gap-3">
+            <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-1">
               <button
                 type="submit"
                 disabled={loading || summaryLoading}
@@ -683,25 +658,23 @@ function App() {
             </div>
           </form>
 
-          <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-400">
+          <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-400">
             <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              Theme defaults
+              Theme presets
             </span>
             <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              No theme is available
+              Local paging
             </span>
             <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              Load more stays local
+              Crossref metadata
             </span>
           </div>
 
-          <details className="mt-5 rounded-3xl border border-white/10 bg-slate-950/60 p-5 text-sm text-slate-300 shadow-lg shadow-slate-950/15">
+          <details className="mt-4 rounded-3xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/15 sm:p-5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl outline-none">
               <div>
-                <h2 className="text-lg font-semibold text-white">Current theme</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  Theme presets are selected in the dropdown.
-                </p>
+                <h2 className="text-base font-semibold text-white">Current theme</h2>
+                <p className="mt-1 text-sm text-slate-400">Selected in the dropdown.</p>
               </div>
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
                 Details
@@ -709,11 +682,7 @@ function App() {
             </summary>
 
             <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={handleReset}
-                className={secondaryButtonClass}
-              >
+              <button type="button" onClick={handleReset} className={secondaryButtonClass}>
                 Reset filters
               </button>
             </div>
@@ -750,266 +719,262 @@ function App() {
           </details>
         </section>
 
-        <section className="grid gap-5 py-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-5">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-white">Executive summary</h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    The backend uses the full result set and all available abstracts.
-                  </p>
-                </div>
-                <div className="text-sm text-slate-400">
-                  {summary?.cache?.hit ? 'Cached' : summary ? 'Fresh' : 'Pending'}
-                </div>
-              </div>
-
-              {summaryError ? (
-                <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-amber-50">
-                  {summaryError}
-                </div>
-              ) : null}
-
-              {summaryLoading ? (
-                <div className="mt-5 space-y-3">
-                  <div className="h-4 w-3/4 animate-pulse rounded-full bg-white/10" />
-                  <div className="h-4 w-full animate-pulse rounded-full bg-white/10" />
-                  <div className="h-4 w-11/12 animate-pulse rounded-full bg-white/10" />
-                  <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/10" />
-                </div>
-              ) : null}
-
-              {summary && !summaryLoading ? (
-                <div className="mt-5 space-y-5">
-                  <ul className="space-y-3">
-                    {(summary.summary?.takeaways || []).slice(0, 3).map((item, index) => (
-                      <li
-                        key={`${index}-${item}`}
-                        className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-200"
-                      >
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 leading-7 text-slate-200">
-                    {summary.summary?.paragraph}
-                  </p>
-                </div>
-              ) : null}
-
-              {!summary && !summaryLoading && !summaryError ? (
-                <p className="mt-4 text-sm leading-6 text-slate-400">
-                  Run a search to generate an executive summary.
+        <section className="space-y-4 py-6">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Executive summary</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  The backend uses the full result set and all available abstracts.
                 </p>
-              ) : null}
-
-              <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-400">
-                <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-                  {summaryNote}
-                </span>
+              </div>
+              <div className="text-sm text-slate-400">
+                {summary?.cache?.hit ? 'Cached' : summary ? 'Fresh' : 'Pending'}
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur sm:p-6">
-              <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-white">Latest records</h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {queryInfo
-                      ? `Found ${queryInfo.count} deduplicated records from ${queryInfo.rawCount} raw Crossref matches.`
-                      : 'Run a search to load the briefing.'}
-                  </p>
-                </div>
-                <div className="text-sm text-slate-400">
-                  {queryInfo?.theme?.label || activeTheme.label}
-                </div>
+            {summaryError ? (
+              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-amber-50">
+                {summaryError}
               </div>
+            ) : null}
 
-              {error ? (
-                <div className="mb-4 rounded-3xl border border-rose-400/20 bg-rose-500/10 p-5 text-rose-100">
-                  {error}
-                </div>
-              ) : null}
+            {summaryLoading ? (
+              <div className="mt-5 space-y-3">
+                <div className="h-4 w-3/4 animate-pulse rounded-full bg-white/10" />
+                <div className="h-4 w-full animate-pulse rounded-full bg-white/10" />
+                <div className="h-4 w-11/12 animate-pulse rounded-full bg-white/10" />
+                <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/10" />
+              </div>
+            ) : null}
 
-              {!loading && visibleArticles.length === 0 ? (
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center text-slate-300">
-                  No items matched this window. Try a broader term or a wider date range.
-                </div>
-              ) : null}
-
-              {loading ? (
-                <div className="grid gap-5 lg:grid-cols-2">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="animate-pulse rounded-3xl border border-white/10 bg-slate-900/70 p-6"
+            {summary && !summaryLoading ? (
+              <div className="mt-5 space-y-4">
+                <ul className="space-y-2">
+                  {(summary.summary?.takeaways || []).slice(0, 3).map((item, index) => (
+                    <li
+                      key={`${index}-${item}`}
+                      className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-200"
                     >
-                      <div className="h-4 w-24 rounded-full bg-white/10" />
-                      <div className="mt-5 h-7 w-5/6 rounded bg-white/10" />
-                      <div className="mt-3 h-4 w-full rounded bg-white/10" />
-                      <div className="mt-2 h-4 w-4/5 rounded bg-white/10" />
-                      <div className="mt-6 h-10 w-full rounded bg-white/10" />
-                    </div>
+                      {item}
+                    </li>
                   ))}
-                </div>
-              ) : null}
+                </ul>
+                <p className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 leading-7 text-slate-200">
+                  {summary.summary?.paragraph}
+                </p>
+              </div>
+            ) : null}
 
-              {!loading && visibleArticles.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
-                    <span>
-                      Showing {visibleArticles.length} of {articles.length} records.
-                    </span>
-                    <span>
-                      {hiddenCount > 0
-                        ? `${hiddenCount} more hidden locally.`
-                        : 'All loaded records are visible.'}
-                    </span>
-                  </div>
+            {!summary && !summaryLoading && !summaryError ? (
+              <p className="mt-4 text-sm leading-6 text-slate-400">
+                Run a search to generate an executive summary.
+              </p>
+            ) : null}
 
-                  <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-                    {visibleArticles.map((article) => (
-                      <article
-                        key={`${article.doi || article.title}-${article.published}`}
-                        className="rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-lg shadow-slate-950/20"
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="rounded-full bg-sky-400/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-sky-200">
-                            {article.type || 'publication'}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {formatPublishedDate(article.published)}
-                          </span>
-                        </div>
-
-                        <h3 className="mt-5 text-xl font-semibold leading-tight text-white">
-                          {article.title}
-                        </h3>
-
-                        <p className="mt-3 text-sm leading-6 text-slate-300">
-                          {formatAuthors(article.authors)}
-                        </p>
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {(article.matchedTerms || []).slice(0, 4).map((term) => (
-                            <span
-                              key={term}
-                              className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
-                            >
-                              {term}
-                            </span>
-                          ))}
-                        </div>
-
-                        <div className="mt-4 text-sm leading-6 text-slate-400">
-                          {article.abstract ? article.abstract : 'No abstract available in Crossref metadata.'}
-                        </div>
-
-                        <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-slate-400">
-                          <span>{article.venue || 'Venue not listed'}</span>
-                          {article.url ? (
-                            <a
-                              href={article.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={recordButtonClass}
-                            >
-                              Open record
-                              <span aria-hidden="true">→</span>
-                            </a>
-                          ) : (
-                            <span className="text-slate-500">No link available</span>
-                          )}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-
-                  {hiddenCount > 0 ? (
-                    <div className="flex justify-center">
-                      <button
-                        type="button"
-                        onClick={handleLoadMore}
-                        className={secondaryButtonClass}
-                      >
-                        Load more
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-400">
+              <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
+                {summaryNote}
+              </span>
             </div>
           </div>
 
-          <aside className="space-y-5">
-            <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 text-sm text-slate-300 shadow-lg shadow-slate-950/20 backdrop-blur">
-              <h2 className="text-lg font-semibold text-white">Search status</h2>
-              <p className="mt-2 leading-6 text-slate-400">{backendNote}</p>
-              <div className="mt-4 space-y-3">
-                <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Window</div>
-                  <div className="mt-1 text-slate-100">
-                    {windowInfo?.from && windowInfo?.to ? `${windowInfo.from} to ${windowInfo.to}` : 'Loading'}
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Search mode</div>
-                  <div className="mt-1 text-slate-100">
-                    {queryInfo?.searchMode || (isNoTheme ? 'no-theme' : 'theme')}
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Paging</div>
-                  <div className="mt-1 text-slate-100">
-                    {queryInfo
-                      ? `${visibleArticles.length} visible of ${articles.length} loaded`
-                      : 'Waiting for results'}
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Cache</div>
-                  <div className="mt-1 text-slate-100">
-                    {queryInfo?.cacheHit ? 'Using cached search data' : 'Fresh search data'}
-                  </div>
-                </div>
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Latest records</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  {queryInfo
+                    ? `Found ${queryInfo.count} deduplicated records from ${queryInfo.rawCount} raw Crossref matches.`
+                    : 'Run a search to load the briefing.'}
+                </p>
+              </div>
+              <div className="text-sm text-slate-400">
+                {queryInfo?.theme?.label || activeTheme.label}
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 text-sm text-slate-300 shadow-lg shadow-slate-950/20 backdrop-blur">
-              <h2 className="text-lg font-semibold text-white">Current query</h2>
-              <div className="mt-4 space-y-3">
-                <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Theme</div>
-                  <div className="mt-1 font-medium text-white">{activeTheme.label}</div>
+            {error ? (
+              <div className="mb-4 rounded-3xl border border-rose-400/20 bg-rose-500/10 p-4 text-rose-100">
+                {error}
+              </div>
+            ) : null}
+
+            {!loading && visibleArticles.length === 0 ? (
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center text-slate-300">
+                No items matched this window. Try a broader term or a wider date range.
+              </div>
+            ) : null}
+
+            {loading ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="animate-pulse rounded-3xl border border-white/10 bg-slate-900/70 p-5"
+                  >
+                    <div className="h-4 w-24 rounded-full bg-white/10" />
+                    <div className="mt-4 h-6 w-5/6 rounded bg-white/10" />
+                    <div className="mt-3 h-4 w-full rounded bg-white/10" />
+                    <div className="mt-2 h-4 w-4/5 rounded bg-white/10" />
+                    <div className="mt-5 h-10 w-full rounded bg-white/10" />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {!loading && visibleArticles.length > 0 ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
+                  <span>
+                    Showing {visibleArticles.length} of {articles.length} records.
+                  </span>
+                  <span>
+                    {hiddenCount > 0
+                      ? `${hiddenCount} more hidden locally.`
+                      : 'All loaded records are visible.'}
+                  </span>
                 </div>
-                <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Description</div>
-                  <div className="mt-1 leading-6">{activeTheme.description}</div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {visibleArticles.map((article) => (
+                    <article
+                      key={`${article.doi || article.title}-${article.published}`}
+                      className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/20"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="rounded-full bg-sky-400/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-sky-200">
+                          {article.type || 'publication'}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {formatPublishedDate(article.published)}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-4 text-lg font-semibold leading-tight text-white">
+                        {article.title}
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-300">
+                        {formatAuthors(article.authors)}
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(article.matchedTerms || []).slice(0, 4).map((term) => (
+                          <span
+                            key={term}
+                            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
+                          >
+                            {term}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 text-sm leading-6 text-slate-400">
+                        {article.abstract ? article.abstract : 'No abstract available in Crossref metadata.'}
+                      </div>
+
+                      <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-slate-400">
+                        <span>{article.venue || 'Venue not listed'}</span>
+                        {article.url ? (
+                          <a
+                            href={article.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={recordButtonClass}
+                          >
+                            Open record
+                            <span aria-hidden="true">→</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-500">No link available</span>
+                        )}
+                      </div>
+                    </article>
+                  ))}
                 </div>
-                <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Summary cache</div>
-                  <div className="mt-1 text-white">{summary?.cache?.hit ? 'Cached' : 'Fresh or pending'}</div>
+
+                {hiddenCount > 0 ? (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      className={secondaryButtonClass}
+                    >
+                      Load more
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/20 backdrop-blur sm:p-5">
+            <h2 className="text-lg font-semibold text-white">Search status</h2>
+            <p className="mt-2 leading-6 text-slate-400">{backendNote}</p>
+            <div className="mt-3 space-y-3">
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Window</div>
+                <div className="mt-1 text-slate-100">
+                  {windowInfo?.from && windowInfo?.to ? `${windowInfo.from} to ${windowInfo.to}` : 'Loading'}
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {(activeTheme.terms || []).length > 0 ? (
-                  activeTheme.terms.map((term) => (
-                    <span
-                      key={term}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
-                    >
-                      {term}
-                    </span>
-                  ))
-                ) : (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-                    Enter your own terms
-                  </span>
-                )}
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Search mode</div>
+                <div className="mt-1 text-slate-100">
+                  {queryInfo?.searchMode || (isNoTheme ? 'no-theme' : 'theme')}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Paging</div>
+                <div className="mt-1 text-slate-100">
+                  {queryInfo
+                    ? `${visibleArticles.length} visible of ${articles.length} loaded`
+                    : 'Waiting for results'}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Cache</div>
+                <div className="mt-1 text-slate-100">
+                  {queryInfo?.cacheHit ? 'Using cached search data' : 'Fresh search data'}
+                </div>
               </div>
             </div>
-          </aside>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/20 backdrop-blur sm:p-5">
+            <h2 className="text-lg font-semibold text-white">Current query</h2>
+            <div className="mt-3 space-y-3">
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Theme</div>
+                <div className="mt-1 font-medium text-white">{activeTheme.label}</div>
+              </div>
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Description</div>
+                <div className="mt-1 leading-6">{activeTheme.description}</div>
+              </div>
+              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Summary cache</div>
+                <div className="mt-1 text-white">{summary?.cache?.hit ? 'Cached' : 'Fresh or pending'}</div>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(activeTheme.terms || []).length > 0 ? (
+                activeTheme.terms.map((term) => (
+                  <span
+                    key={term}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
+                  >
+                    {term}
+                  </span>
+                ))
+              ) : (
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+                  Enter your own terms
+                </span>
+              )}
+            </div>
+          </div>
         </section>
 
         <SiteFooter />

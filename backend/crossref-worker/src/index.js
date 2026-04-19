@@ -889,7 +889,6 @@ async function generateExecSum(context, bundle) {
       },
       body: JSON.stringify({
         model: EXEC_SUM_MODEL,
-        temperature: 0.2,
         response_format: {
           type: "json_object",
         },

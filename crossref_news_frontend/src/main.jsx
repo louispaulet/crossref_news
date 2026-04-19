@@ -9,8 +9,8 @@ const legalNoticeSections = [
   {
     heading: 'Site purpose',
     paragraphs: [
-      'Crossref News is an academic briefing that surfaces recent Crossref metadata for a small set of research themes.',
-      'The site is designed for reading, filtering, and checking source records, not for editorial ranking or automated moderation decisions.',
+      'Crossref News is a briefing on recent Crossref metadata for a small set of research themes.',
+      'The site is for reading, filtering, and checking source records, not for editorial ranking or automated moderation decisions.',
     ],
   },
   {
@@ -44,7 +44,7 @@ const privacySections = [
     heading: 'Cookies and analytics',
     paragraphs: [
       'This site does not intentionally use advertising or analytics cookies.',
-      'If the hosting layer or browser adds technical logs, they are handled by the platform that serves the app.',
+      'If the browser or hosting platform adds technical logs, they are handled by the platform that serves the site.',
     ],
   },
   {
@@ -60,7 +60,7 @@ const termsSections = [
   {
     heading: 'Use of the site',
     paragraphs: [
-      'Crossref News is provided as a read-only briefing interface for academic metadata.',
+      'Crossref News is provided as a read-only site for academic metadata.',
       'You may browse, search, and share links to the pages, provided you keep the purpose and attribution intact.',
     ],
   },
