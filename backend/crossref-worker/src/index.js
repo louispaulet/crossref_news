@@ -565,6 +565,7 @@ function buildSearchContext(url) {
   const window = buildSearchWindow(url, theme?.defaultDays ?? DEFAULT_DAYS);
   const queryTerms = normalizeSearchTerms(url.searchParams.getAll("term").map((term) => term.trim()).filter(Boolean));
   const terms = theme ? normalizeSearchTerms([...theme.terms, ...queryTerms]) : queryTerms;
+  const forceRefresh = ["1", "true", "yes"].includes((url.searchParams.get("refresh") || "").trim().toLowerCase());
 
   if (!theme && terms.length === 0) {
     throw new Error("No-theme searches require at least one term");
@@ -583,6 +584,7 @@ function buildSearchContext(url) {
     rowsPerQuery,
     maxResults,
     mailto,
+    forceRefresh,
   };
 }
 
@@ -736,7 +738,7 @@ async function getSearchBundle(request, context) {
   cacheUrl.search = cacheKey;
   const cacheRequest = new Request(cacheUrl.toString(), { method: "GET" });
 
-  if (pendingSearches.has(cacheKey)) {
+  if (!context.forceRefresh && pendingSearches.has(cacheKey)) {
     const value = await pendingSearches.get(cacheKey);
     return {
       ...value,
@@ -748,16 +750,18 @@ async function getSearchBundle(request, context) {
   }
 
   const pending = (async () => {
-    const cached = await caches.default.match(cacheRequest);
-    if (cached) {
-      const payload = await cached.json();
-      return {
-        ...payload,
-        cache: {
-          hit: true,
-          ttlSeconds: CACHE_TTL_SECONDS,
-        },
-      };
+    if (!context.forceRefresh) {
+      const cached = await caches.default.match(cacheRequest);
+      if (cached) {
+        const payload = await cached.json();
+        return {
+          ...payload,
+          cache: {
+            hit: true,
+            ttlSeconds: CACHE_TTL_SECONDS,
+          },
+        };
+      }
     }
 
     const payload = await computeSearchBundle(context);
@@ -853,7 +857,7 @@ async function generateExecSum(context, bundle) {
   cacheUrl.search = cacheKey;
   const cacheRequest = new Request(cacheUrl.toString(), { method: "GET" });
 
-  if (pendingExecSums.has(cacheKey)) {
+  if (!context.forceRefresh && pendingExecSums.has(cacheKey)) {
     const value = await pendingExecSums.get(cacheKey);
     return {
       ...value,
@@ -865,16 +869,18 @@ async function generateExecSum(context, bundle) {
   }
 
   const pending = (async () => {
-    const cached = await caches.default.match(cacheRequest);
-    if (cached) {
-      const payload = await cached.json();
-      return {
-        ...payload,
-        cache: {
-          hit: true,
-          ttlSeconds: CACHE_TTL_SECONDS,
-        },
-      };
+    if (!context.forceRefresh) {
+      const cached = await caches.default.match(cacheRequest);
+      if (cached) {
+        const payload = await cached.json();
+        return {
+          ...payload,
+          cache: {
+            hit: true,
+            ttlSeconds: CACHE_TTL_SECONDS,
+          },
+        };
+      }
     }
 
     if (!context.env?.OPENAI_API_KEY) {

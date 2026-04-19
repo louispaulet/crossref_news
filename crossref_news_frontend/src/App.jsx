@@ -207,6 +207,7 @@ function buildSearchRequest({
   extraTerms,
   fromDate,
   toDate,
+  forceRefresh,
 }) {
   const selectedFromDate = fromDate.trim()
   const selectedToDate = toDate.trim()
@@ -240,6 +241,10 @@ function buildSearchRequest({
     params.append('term', term)
   }
 
+  if (forceRefresh) {
+    params.set('refresh', '1')
+  }
+
   return {
     params,
     isNoTheme,
@@ -263,6 +268,7 @@ function App() {
   const [extraTerms, setExtraTerms] = useState('')
   const [fromDate, setFromDate] = useState(() => initialWindow.from)
   const [toDate, setToDate] = useState(() => initialWindow.to)
+  const [forceRefresh, setForceRefresh] = useState(false)
   const [articles, setArticles] = useState([])
   const [windowInfo, setWindowInfo] = useState(initialWindow)
   const [queryInfo, setQueryInfo] = useState(null)
@@ -395,6 +401,7 @@ function App() {
         setVisibleCount(DEFAULT_PAGE_SIZE)
         setNewsPageSize(DEFAULT_PAGE_SIZE)
         setBackendNote(request.error)
+        setForceRefresh(false)
         return
       }
 
@@ -441,7 +448,7 @@ function App() {
           cacheHit,
         })
         setBackendNote(
-          `${cacheHit ? 'Using cached search results.' : 'Loaded fresh search results.'} Showing ${Math.min(pageSize, returnedCount)} of ${returnedCount} records.`,
+          `${request.params.get('refresh') ? 'Forced refresh.' : cacheHit ? 'Using cached search results.' : 'Loaded fresh search results.'} Showing ${Math.min(pageSize, returnedCount)} of ${returnedCount} records.`,
         )
       } catch (fetchError) {
         if (!alive) {
@@ -482,6 +489,7 @@ function App() {
         extraTerms,
         fromDate,
         toDate,
+        forceRefresh,
       })
 
       if (request.error) {
@@ -489,6 +497,7 @@ function App() {
         setSummary(null)
         setSummaryError(request.error)
         setSummaryNote(request.error)
+        setForceRefresh(false)
         return
       }
 
@@ -511,7 +520,7 @@ function App() {
 
         setSummary(data)
         setSummaryNote(
-          `${data.cache?.hit ? 'Using cached executive summary.' : 'Generated a fresh executive summary.'}`,
+          `${request.params.get('refresh') ? 'Forced refresh.' : data.cache?.hit ? 'Using cached executive summary.' : 'Generated a fresh executive summary.'}`,
         )
       } catch (fetchError) {
         if (!alive) {
@@ -544,6 +553,7 @@ function App() {
     setToDate(defaults.to)
     setVisibleCount(DEFAULT_PAGE_SIZE)
     setNewsPageSize(DEFAULT_PAGE_SIZE)
+    setForceRefresh(false)
     setSearchRequestId((value) => value + 1)
   }
 
@@ -555,14 +565,14 @@ function App() {
     <div className="relative min-h-screen overflow-hidden bg-[#07111f] text-slate-100">
       <PageOrnaments />
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.24),_transparent_55%),radial-gradient(circle_at_75%_15%,_rgba(99,102,241,0.18),_transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(7,17,31,1))]" />
-      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-        <header className="border-b border-white/10 pb-5">
-          <div className="max-w-3xl space-y-3">
+      <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
+        <header className="border-b border-white/10 pb-4">
+          <div className="max-w-5xl space-y-3">
             <div className="flex items-center gap-4">
               <img
                 src="/ornaments/crossref-mark.svg"
                 alt=""
-                className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/5 p-1.5 shadow-lg shadow-slate-950/20"
+                className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/5 p-1.5 shadow-lg shadow-slate-950/20 lg:h-12 lg:w-12"
               />
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-sky-300/80">
@@ -573,10 +583,10 @@ function App() {
                 </p>
               </div>
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+            <h1 className="max-w-5xl text-3xl font-semibold tracking-tight text-white leading-[0.95] sm:text-4xl lg:text-[4.4rem]">
               A briefing on recent academic work about fraud detection.
             </h1>
-            <p className="max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+            <p className="max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
               Search recent Crossref metadata for fraud detection, anomaly detection, XGBoost,
               graph methods, and adjacent work. Source: Crossref metadata with optional theme
               filters and extra terms.
@@ -584,22 +594,24 @@ function App() {
           </div>
         </header>
 
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5">
+        <section className="rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5">
           <form
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr_1.1fr_0.8fr_0.8fr_auto]"
+            className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[1.35fr_1.2fr_0.85fr_0.85fr_auto]"
             onSubmit={(event) => {
               event.preventDefault()
               setSearchRequestId((value) => value + 1)
             }}
           >
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">Theme</span>
+            <label className="min-w-0 space-y-2">
+              <span className="block text-[11px] uppercase tracking-[0.28em] text-slate-500">
+                Theme
+              </span>
               <select
                 id="theme"
                 name="theme"
                 value={selectedTheme}
                 onChange={(event) => setSelectedTheme(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-400/40"
+                className="h-14 w-full rounded-[1.15rem] border border-white/10 bg-slate-950/70 px-4 text-slate-100 outline-none transition focus:border-sky-400/40"
               >
                 {themeOptions.map((theme) => (
                   <option key={theme.id} value={theme.id}>
@@ -609,8 +621,8 @@ function App() {
               </select>
             </label>
 
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
+            <label className="min-w-0 space-y-2">
+              <span className="block text-[11px] uppercase tracking-[0.28em] text-slate-500">
                 Additional terms
               </span>
               <input
@@ -619,43 +631,58 @@ function App() {
                 value={extraTerms}
                 onChange={(event) => setExtraTerms(event.target.value)}
                 placeholder="fraud graph, XGBoost, chargeback"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-400/40"
+                className="h-14 w-full rounded-[1.15rem] border border-white/10 bg-slate-950/70 px-4 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-400/40"
               />
             </label>
 
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">From</span>
+            <label className="min-w-0 space-y-2">
+              <span className="block text-[11px] uppercase tracking-[0.28em] text-slate-500">From</span>
               <input
                 id="from-date"
                 name="from-date"
                 type="date"
                 value={fromDate}
                 onChange={(event) => setFromDate(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-400/40"
+                className="h-14 w-full rounded-[1.15rem] border border-white/10 bg-slate-950/70 px-4 text-slate-100 outline-none transition focus:border-sky-400/40"
               />
             </label>
 
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">To</span>
+            <label className="min-w-0 space-y-2">
+              <span className="block text-[11px] uppercase tracking-[0.28em] text-slate-500">To</span>
               <input
                 id="to-date"
                 name="to-date"
                 type="date"
                 value={toDate}
                 onChange={(event) => setToDate(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-400/40"
+                className="h-14 w-full rounded-[1.15rem] border border-white/10 bg-slate-950/70 px-4 text-slate-100 outline-none transition focus:border-sky-400/40"
               />
             </label>
 
-            <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-1">
+            <div className="flex items-end gap-3 sm:col-span-2 xl:col-span-1">
               <button
                 type="submit"
                 disabled={loading || summaryLoading}
-                className={`${primaryButtonClass} w-full rounded-2xl py-3 disabled:cursor-not-allowed disabled:bg-sky-400/60`}
+                className={`${primaryButtonClass} h-14 w-full rounded-[1.15rem] px-6 disabled:cursor-not-allowed disabled:bg-sky-400/60`}
               >
                 {loading || summaryLoading ? 'Updating...' : 'Update briefing'}
               </button>
             </div>
+
+            <label className="flex items-center gap-3 rounded-[1.15rem] border border-white/10 bg-slate-950/45 px-4 py-3 text-sm text-slate-300 sm:col-span-2 xl:col-span-5">
+              <input
+                type="checkbox"
+                checked={forceRefresh}
+                onChange={(event) => setForceRefresh(event.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-slate-950 text-sky-400 focus:ring-sky-300"
+              />
+              <span className="leading-6">
+                Force refresh results and executive summary
+              </span>
+              <span className="ml-auto text-xs uppercase tracking-[0.25em] text-slate-500">
+                Bypass the 1 h cache
+              </span>
+            </label>
           </form>
 
           <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-400">
@@ -670,7 +697,7 @@ function App() {
             </span>
           </div>
 
-          <details className="mt-4 rounded-3xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/15 sm:p-5">
+          <details className="mt-4 rounded-[1.75rem] border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/15 sm:p-5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl outline-none">
               <div>
                 <h2 className="text-base font-semibold text-white">Current theme</h2>
@@ -720,7 +747,7 @@ function App() {
         </section>
 
         <section className="space-y-4 py-6">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
+          <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-white">Executive summary</h2>
@@ -779,7 +806,7 @@ function App() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
+          <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-white">Latest records</h2>
@@ -909,7 +936,7 @@ function App() {
             ) : null}
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/20 backdrop-blur sm:p-5">
+          <div className="rounded-[1.75rem] border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/20 backdrop-blur sm:p-5">
             <h2 className="text-lg font-semibold text-white">Search status</h2>
             <p className="mt-2 leading-6 text-slate-400">{backendNote}</p>
             <div className="mt-3 space-y-3">
