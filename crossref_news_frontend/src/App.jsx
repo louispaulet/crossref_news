@@ -81,8 +81,8 @@ const NO_THEME_OPTION = {
 
 const DEFAULT_PAGE_SIZE = 10
 const DEFAULT_MAX_VISIBLE = 50
-const EXEC_SUMMARY_TIMEOUT_MS = 120000
-const EXEC_SUMMARY_FIRST_PHASE_MS = 60000
+const EXEC_SUMMARY_TIMEOUT_MS = 60000
+const EXEC_SUMMARY_FIRST_PHASE_MS = 30000
 const EXEC_SUMMARY_TICK_MS = 500
 const EXEC_SUMMARY_PROGRESS_CAP = 98.4
 const EXEC_SUMMARY_SLOW_MESSAGE = "sorry, we're slow today..."
@@ -227,6 +227,29 @@ function formatAuthors(authors) {
   }
 
   return `${authors.slice(0, 3).join(', ')} +${authors.length - 3}`
+}
+
+function truncateWords(text, maxWords = 60) {
+  const normalized = String(text || '').trim()
+  if (!normalized) {
+    return {
+      text: '',
+      truncated: false,
+    }
+  }
+
+  const words = normalized.split(/\s+/).filter(Boolean)
+  if (words.length <= maxWords) {
+    return {
+      text: normalized,
+      truncated: false,
+    }
+  }
+
+  return {
+    text: `${words.slice(0, maxWords).join(' ')}…`,
+    truncated: true,
+  }
 }
 
 function formatPublishedDate(value) {
@@ -632,7 +655,6 @@ function App() {
         }
 
         timedOut = true
-        controller.abort()
         clearSummaryTimers()
         setSummaryPhase('timed_out')
         setSummaryLoading(false)
@@ -648,7 +670,7 @@ function App() {
         })
         const data = await readJsonResponse(response, 'Executive summary endpoint')
 
-        if (!alive || settled || timedOut || summaryRunIdRef.current !== requestId) {
+        if (!alive || settled || summaryRunIdRef.current !== requestId) {
           return
         }
 
@@ -1080,7 +1102,20 @@ function App() {
                       </div>
 
                       <div className="mt-3 text-sm leading-6 text-slate-400">
-                        {article.abstract ? article.abstract : 'No abstract available in Crossref metadata.'}
+                        {article.abstract ? (() => {
+                          const abstractPreview = truncateWords(article.abstract, 60)
+
+                          return (
+                            <>
+                              {abstractPreview.text}
+                              {abstractPreview.truncated ? (
+                                <em> (truncated)</em>
+                              ) : null}
+                            </>
+                          )
+                        })() : (
+                          'No abstract available in Crossref metadata.'
+                        )}
                       </div>
 
                       <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-slate-400">
