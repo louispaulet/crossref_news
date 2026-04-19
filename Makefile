@@ -7,7 +7,7 @@ BACKEND_PID := $(STATE_DIR)/backend.pid
 FRONTEND_LOG := $(STATE_DIR)/frontend.log
 BACKEND_LOG := $(STATE_DIR)/backend.log
 
-VITE_BASE_PATH ?= /crossref_news/
+VITE_BASE_PATH ?= /
 VITE_API_BASE_URL ?=
 
 .PHONY: up kill deploy

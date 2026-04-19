@@ -62,7 +62,7 @@ make deploy
 
 `make deploy` does three things:
 
-1. builds the frontend for GitHub Pages with `VITE_BASE_PATH=/crossref_news/`
+1. builds the frontend for GitHub Pages with `VITE_BASE_PATH=/`
 2. publishes the static frontend build with `gh-pages`
 3. deploys the Worker with `wrangler deploy`
 
