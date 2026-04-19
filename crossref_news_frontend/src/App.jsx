@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageOrnaments from './components/PageOrnaments'
 import SiteFooter from './components/SiteFooter'
 
 const FALLBACK_THEMES = [
@@ -390,22 +391,54 @@ function App() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#07111f] text-slate-100">
+      <PageOrnaments />
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.24),_transparent_55%),radial-gradient(circle_at_75%_15%,_rgba(99,102,241,0.18),_transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(7,17,31,1))]" />
       <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-        <header className="flex flex-col gap-5 border-b border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <header className="grid gap-6 border-b border-white/10 pb-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div className="max-w-3xl space-y-3">
-            <p className="text-xs uppercase tracking-[0.35em] text-sky-300/80">
-              Crossref News
-            </p>
+            <div className="flex items-center gap-4">
+              <img
+                src="/ornaments/crossref-mark.svg"
+                alt=""
+                className="h-12 w-12 shrink-0 rounded-2xl border border-white/10 bg-white/5 p-1.5 shadow-lg shadow-slate-950/20"
+              />
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-sky-300/80">
+                  Crossref News
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Crossref metadata, theme filters, and optional extra terms.
+                </p>
+              </div>
+            </div>
             <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
               A briefing on recent academic work about fraud detection.
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              Search recent Crossref metadata for fraud detection, anomaly detection,
-              XGBoost, graph methods, and adjacent work. Source: Crossref metadata with
-              optional theme filters and extra terms.
+              Search recent Crossref metadata for fraud detection, anomaly detection, XGBoost,
+              graph methods, and adjacent work. Source: Crossref metadata with optional theme
+              filters and extra terms.
             </p>
           </div>
+
+          <aside className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl shadow-slate-950/25 backdrop-blur">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.16),_transparent_60%),radial-gradient(circle_at_bottom_right,_rgba(34,197,94,0.16),_transparent_44%)]" />
+            <div className="relative grid gap-4">
+              <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Visual layer
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Lightweight SVG ornaments add motion without changing the reading flow.
+                </p>
+              </div>
+              <img
+                src="/ornaments/crossref-lens.svg"
+                alt=""
+                className="mx-auto w-full max-w-[18rem] opacity-90 drop-shadow-2xl"
+              />
+            </div>
+          </aside>
         </header>
 
         <section className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-6">

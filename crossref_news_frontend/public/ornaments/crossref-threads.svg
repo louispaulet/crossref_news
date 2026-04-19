@@ -1,0 +1,42 @@
+<svg width="360" height="240" viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Crossref News network ornament">
+  <defs>
+    <linearGradient id="threads" x1="56" y1="48" x2="304" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8" />
+      <stop offset="0.45" stop-color="#22C55E" />
+      <stop offset="1" stop-color="#F59E0B" />
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#threads)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+    <path d="M42 168C72 132 102 122 132 128C161 133 181 157 214 156C243 155 271 129 318 84" />
+    <path d="M46 78C78 104 104 112 136 106C171 100 189 74 223 74C256 74 278 95 316 136" />
+    <path d="M72 194C101 182 118 171 138 150C159 128 179 116 205 114C232 112 256 121 287 146" />
+  </g>
+  <g fill="#0F172A">
+    <circle cx="42" cy="168" r="10" />
+    <circle cx="132" cy="128" r="10" />
+    <circle cx="214" cy="156" r="10" />
+    <circle cx="318" cy="84" r="10" />
+    <circle cx="46" cy="78" r="10" />
+    <circle cx="136" cy="106" r="10" />
+    <circle cx="223" cy="74" r="10" />
+    <circle cx="316" cy="136" r="10" />
+    <circle cx="72" cy="194" r="10" />
+    <circle cx="138" cy="150" r="10" />
+    <circle cx="205" cy="114" r="10" />
+    <circle cx="287" cy="146" r="10" />
+  </g>
+  <g fill="rgba(56,189,248,0.18)">
+    <circle cx="42" cy="168" r="4" />
+    <circle cx="132" cy="128" r="4" />
+    <circle cx="214" cy="156" r="4" />
+    <circle cx="318" cy="84" r="4" />
+    <circle cx="46" cy="78" r="4" />
+    <circle cx="136" cy="106" r="4" />
+    <circle cx="223" cy="74" r="4" />
+    <circle cx="316" cy="136" r="4" />
+    <circle cx="72" cy="194" r="4" />
+    <circle cx="138" cy="150" r="4" />
+    <circle cx="205" cy="114" r="4" />
+    <circle cx="287" cy="146" r="4" />
+  </g>
+</svg>
