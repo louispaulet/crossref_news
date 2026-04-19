@@ -12,6 +12,16 @@ const DEFAULT_TERMS = [
   "payment processing fraud",
   "graph machine learning fraud",
 ];
+const DEFAULT_THEME_ID = "fraud-detection";
+const THEMES = {
+  [DEFAULT_THEME_ID]: {
+    id: DEFAULT_THEME_ID,
+    label: "Fraud detection",
+    description: "Academic work on fraud detection, anomaly detection, XGBoost, and graph-based models.",
+    terms: DEFAULT_TERMS,
+    defaultDays: DEFAULT_DAYS,
+  },
+};
 
 const TYPE_PRIORITY = new Map([
   ["journal-article", 0],
@@ -89,6 +99,19 @@ function parsePositiveInt(value, fallback, name) {
   return parsed;
 }
 
+function parseIsoDate(value, name) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error(`${name} must be an ISO date in YYYY-MM-DD format`);
+  }
+
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`${name} must be an ISO date in YYYY-MM-DD format`);
+  }
+
+  return value;
+}
+
 function formatDateParts(dateParts) {
   if (!Array.isArray(dateParts) || dateParts.length === 0) {
     return "unknown date";
@@ -132,6 +155,36 @@ function extractAuthors(item) {
     }
   }
   return authors;
+}
+
+function getTheme(themeId) {
+  if (themeId && THEMES[themeId]) {
+    return THEMES[themeId];
+  }
+
+  return THEMES[DEFAULT_THEME_ID];
+}
+
+function normalizeSearchTerms(terms) {
+  const seen = new Set();
+  const normalized = [];
+
+  for (const term of terms) {
+    const trimmed = term.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const key = normalizeText(trimmed);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    normalized.push(trimmed);
+  }
+
+  return normalized;
 }
 
 function recordFromItem(item, matchedTerm) {
@@ -211,10 +264,17 @@ function classifyTopics(record) {
   return topics;
 }
 
-function isRelevant(record) {
+function isRelevant(record, terms = []) {
   const title = normalizeText(record.title);
   if (!title) {
     return false;
+  }
+
+  for (const term of terms) {
+    const normalizedTerm = normalizeText(term);
+    if (normalizedTerm && title.includes(normalizedTerm)) {
+      return true;
+    }
   }
 
   const strongPhrases = [
@@ -331,6 +391,43 @@ function compareRecords(a, b) {
   return a.title.localeCompare(b.title);
 }
 
+function buildSearchWindow(url, defaultDays) {
+  const fromParam = url.searchParams.get("from");
+  const toParam = url.searchParams.get("to");
+
+  if ((fromParam && !toParam) || (!fromParam && toParam)) {
+    throw new Error("from and to must be provided together");
+  }
+
+  if (fromParam && toParam) {
+    const fromDate = parseIsoDate(fromParam, "from");
+    const toDate = parseIsoDate(toParam, "to");
+    if (fromDate > toDate) {
+      throw new Error("from must be earlier than or equal to to");
+    }
+
+    return {
+      from: fromDate,
+      to: toDate,
+      days: Math.max(
+        1,
+        Math.floor((Date.parse(`${toDate}T00:00:00Z`) - Date.parse(`${fromDate}T00:00:00Z`)) / 86400000) + 1,
+      ),
+    };
+  }
+
+  const days = parsePositiveInt(url.searchParams.get("days"), defaultDays, "days");
+  const untilDate = new Date();
+  const fromDate = new Date(untilDate);
+  fromDate.setDate(untilDate.getDate() - (days - 1));
+
+  return {
+    from: fromDate.toISOString().slice(0, 10),
+    to: untilDate.toISOString().slice(0, 10),
+    days,
+  };
+}
+
 async function fetchCrossrefItems(term, fromDate, untilDate, rows, mailto, timeoutMs) {
   const params = new URLSearchParams({
     "query.title": term,
@@ -390,26 +487,21 @@ async function fetchCrossrefItems(term, fromDate, untilDate, rows, mailto, timeo
 }
 
 async function buildNewsPayload(url) {
-  const days = parsePositiveInt(url.searchParams.get("days"), DEFAULT_DAYS, "days");
+  const theme = getTheme(url.searchParams.get("theme"));
   const rowsPerQuery = parsePositiveInt(url.searchParams.get("rowsPerQuery"), DEFAULT_ROWS_PER_QUERY, "rowsPerQuery");
   const maxResults = parsePositiveInt(url.searchParams.get("maxResults"), DEFAULT_MAX_RESULTS, "maxResults");
   const mailto = (url.searchParams.get("mailto") || "").trim() || null;
   const queryTerms = url.searchParams.getAll("term").map((term) => term.trim()).filter(Boolean);
-  const terms = queryTerms.length > 0 ? queryTerms : [...DEFAULT_TERMS];
-
-  const untilDate = new Date();
-  const fromDate = new Date(untilDate);
-  fromDate.setDate(untilDate.getDate() - (days - 1));
-  const untilDateString = untilDate.toISOString().slice(0, 10);
-  const fromDateString = fromDate.toISOString().slice(0, 10);
+  const terms = normalizeSearchTerms([...theme.terms, ...queryTerms]);
+  const window = buildSearchWindow(url, theme.defaultDays ?? DEFAULT_DAYS);
 
   const rawRecords = [];
   const seenPairs = new Set();
   for (const term of terms) {
-    const items = await fetchCrossrefItems(term, fromDateString, untilDateString, rowsPerQuery, mailto, 15000);
+    const items = await fetchCrossrefItems(term, window.from, window.to, rowsPerQuery, mailto, 15000);
     for (const item of items) {
       const record = recordFromItem(item, term);
-      if (!isRelevant(record)) {
+      if (!isRelevant(record, terms)) {
         continue;
       }
 
@@ -430,13 +522,21 @@ async function buildNewsPayload(url) {
   return {
     source: "crossref",
     backend: "cloudflare-workers-poc",
+    theme: {
+      id: theme.id,
+      label: theme.label,
+      description: theme.description,
+    },
     window: {
-      from: fromDateString,
-      to: untilDateString,
-      days,
+      from: window.from,
+      to: window.to,
+      days: window.days,
     },
     terms,
     query: {
+      theme: theme.id,
+      from: url.searchParams.get("from") || null,
+      to: url.searchParams.get("to") || null,
       rowsPerQuery,
       maxResults,
       mailto,
@@ -459,12 +559,23 @@ async function buildNewsPayload(url) {
 function landingResponse(url) {
   return jsonResponse({
     service: "crossref-academic-news-poc",
+    defaultTheme: DEFAULT_THEME_ID,
+    themes: Object.values(THEMES).map((theme) => ({
+      id: theme.id,
+      label: theme.label,
+      description: theme.description,
+      terms: theme.terms,
+      defaultDays: theme.defaultDays,
+    })),
     endpoints: {
       news: `${url.origin}/news`,
     },
     usage: {
       method: "GET",
       query: {
+        theme: "theme id, default fraud-detection",
+        from: "optional ISO date YYYY-MM-DD",
+        to: "optional ISO date YYYY-MM-DD",
         days: "positive integer, default 7",
         rowsPerQuery: "positive integer, default 25",
         maxResults: "positive integer, default 25",
