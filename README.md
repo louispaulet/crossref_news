@@ -1,15 +1,16 @@
 # crossref_news
 
-Live academic news briefing for fraud detection and related research, powered by the Crossref REST API.
+Live academic briefing for fraud detection and related research, powered by the Crossref REST API.
 
-The repo now ships as a small full-stack app:
+This repository is a small full-stack app:
 
-- `backend/crossref-worker/` is the Cloudflare Worker API.
-- `crossref_news_frontend/` is the React + Vite frontend.
+- `backend/crossref-worker/` contains the Cloudflare Worker API.
+- `crossref_news_frontend/` contains the React + Vite frontend.
 - `make up`, `make kill`, and `make deploy` are the repo-level entrypoints.
+- `agents.md` contains the repo instructions for future contributors.
 - Before adding or editing frontend text, read `tone_of_voice.md` first.
 
-## What it shows
+## What It Shows
 
 The current theme focuses on fraud detection in academia, including work around:
 
@@ -19,9 +20,9 @@ The current theme focuses on fraud detection in academia, including work around:
 - chargebacks
 - anomaly detection
 
-The theme system is config-driven so more academic-news categories can be added later without rebuilding the app structure.
+The theme system is config-driven, so more academic-news categories can be added later without changing the app structure.
 
-## Local development
+## Local Development
 
 Start both services from the repo root:
 
@@ -34,7 +35,7 @@ This starts:
 - the frontend on [http://127.0.0.1:5173](http://127.0.0.1:5173)
 - the Worker on [http://127.0.0.1:8787](http://127.0.0.1:8787)
 
-The frontend uses a Vite proxy at `/api` in development, so it can talk to the Worker without any manual URL setup.
+The frontend uses a Vite proxy at `/api` in development, so it can talk to the Worker without manual URL setup.
 
 Stop both services with:
 
@@ -73,8 +74,7 @@ make deploy
 2. publishes the static frontend build with `gh-pages`
 3. deploys the Worker with `wrangler deploy`
 
-The frontend uses `HashRouter`, so GitHub Pages can serve deep links without
-needing custom server rewrite rules.
+The frontend uses `HashRouter`, so GitHub Pages can serve deep links without custom server rewrite rules.
 
 If your GitHub Pages project path changes, override `VITE_BASE_PATH` before running the deploy command.
 
@@ -101,9 +101,9 @@ Example:
 curl "http://127.0.0.1:8787/news?theme=fraud-detection&from=2026-04-01&to=2026-04-19&term=xgboost"
 ```
 
-The Worker now caches canonical search bundles for 1 hour. `/news` returns up to 50 deduplicated articles plus pagination metadata, and the frontend shows the first 10 by default while keeping the rest local for `Load more`.
+The Worker caches canonical search bundles for 1 hour. `/news` returns up to 50 deduplicated articles plus pagination metadata, and the frontend shows the first 10 by default while keeping the rest local for `Load more`.
 
-## Executive summary API
+## Executive Summary API
 
 `GET /execsum` accepts the same canonical search params as `/news`.
 
@@ -114,10 +114,10 @@ It reuses the cached search bundle, passes the full set of article metadata and 
 
 The route uses `gpt-5-nano` and caches the generated summary for 1 hour when the search bundle is unchanged.
 
-## Repository notes
+## Repository Notes
 
 - Keep the demo lightweight and stdlib-first unless there is a strong reason not to.
-- Keep the frontend/backend changes aligned when the API shape changes.
+- Keep the frontend and backend changes aligned when the API shape changes.
 - Update this README whenever the runtime workflow, command entrypoints, or deployment assumptions change.
 - The frontend uses `gh-pages` for publishing and `wrangler` for Worker deployment.
 - Cloudflare authentication still needs to be available locally before `wrangler deploy` will succeed.
