@@ -157,6 +157,10 @@ function App() {
 
   const themes = config.themes?.length > 0 ? config.themes : FALLBACK_THEMES
   const defaultThemeId = resolveThemeId(themes, config.defaultTheme)
+  const themeFieldId = 'theme'
+  const extraTermsFieldId = 'extra-terms'
+  const fromFieldId = 'from-date'
+  const toFieldId = 'to-date'
   const activeTheme =
     themes.find((theme) => theme.id === selectedTheme) ||
     themes.find((theme) => theme.id === defaultThemeId) ||
@@ -448,8 +452,12 @@ function App() {
             }}
           >
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">Theme</span>
+              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                Theme
+              </span>
               <select
+                id={themeFieldId}
+                name={themeFieldId}
                 value={selectedTheme}
                 onChange={(event) => setSelectedTheme(event.target.value)}
                 className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-400/40"
@@ -467,6 +475,8 @@ function App() {
                 Additional terms
               </span>
               <input
+                id={extraTermsFieldId}
+                name={extraTermsFieldId}
                 value={extraTerms}
                 onChange={(event) => setExtraTerms(event.target.value)}
                 placeholder="fraud graph, XGBoost, chargeback"
@@ -475,8 +485,12 @@ function App() {
             </label>
 
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">From</span>
+              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                From
+              </span>
               <input
+                id={fromFieldId}
+                name={fromFieldId}
                 type="date"
                 value={fromDate}
                 onChange={(event) => setFromDate(event.target.value)}
@@ -485,8 +499,12 @@ function App() {
             </label>
 
             <label className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">To</span>
+              <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                To
+              </span>
               <input
+                id={toFieldId}
+                name={toFieldId}
                 type="date"
                 value={toDate}
                 onChange={(event) => setToDate(event.target.value)}
