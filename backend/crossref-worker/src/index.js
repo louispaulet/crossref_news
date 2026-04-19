@@ -1,8 +1,13 @@
 const API_URL = "https://api.crossref.org/works";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_DAYS = 7;
 const DEFAULT_ROWS_PER_QUERY = 25;
-const DEFAULT_MAX_RESULTS = 25;
+const DEFAULT_MAX_RESULTS = 50;
+const DEFAULT_PAGE_SIZE = 10;
+const CACHE_TTL_SECONDS = 60 * 60;
+const EXEC_SUM_MODEL = "gpt-5-nano";
 const DEFAULT_THEME_ID = "fraud-detection";
+const NO_THEME_ID = "none";
 const DEFAULT_TERMS = [
   "fraud detection",
   "credit card fraud",
@@ -84,6 +89,9 @@ const TYPE_PRIORITY = new Map([
   ["posted-content", 5],
   ["reference-entry", 6],
 ]);
+
+const pendingSearches = new Map();
+const pendingExecSums = new Map();
 
 function corsHeaders() {
   return {
@@ -241,9 +249,37 @@ function extractAuthors(item) {
   return authors;
 }
 
+function decodeEntities(value) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+function cleanAbstract(rawAbstract) {
+  if (typeof rawAbstract !== "string" || !rawAbstract.trim()) {
+    return null;
+  }
+
+  const stripped = rawAbstract
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return stripped ? decodeEntities(stripped) : null;
+}
+
 function getTheme(themeId) {
-  if (themeId && THEMES[themeId]) {
-    return THEMES[themeId];
+  const normalizedThemeId = (themeId || "").trim().toLowerCase();
+  if (!normalizedThemeId || normalizedThemeId === NO_THEME_ID) {
+    return null;
+  }
+
+  if (THEMES[normalizedThemeId]) {
+    return THEMES[normalizedThemeId];
   }
 
   return THEMES[DEFAULT_THEME_ID];
@@ -283,6 +319,7 @@ function recordFromItem(item, matchedTerm) {
       break;
     }
   }
+
   return {
     title,
     doi,
@@ -294,6 +331,7 @@ function recordFromItem(item, matchedTerm) {
     published: extractDate(item),
     publishedParts,
     itemType: item.type || "unknown",
+    abstract: cleanAbstract(item.abstract),
     matchedTerms: new Set([matchedTerm]),
     raw: item,
   };
@@ -429,6 +467,9 @@ function mergeRecords(records) {
   }
 
   best.matchedTerms = mergedTerms;
+  if (!best.abstract) {
+    best.abstract = records.find((record) => record.abstract)?.abstract || null;
+  }
   return best;
 }
 
@@ -519,6 +560,49 @@ function buildSearchWindow(url, defaultDays) {
   };
 }
 
+function buildSearchContext(url) {
+  const theme = getTheme(url.searchParams.get("theme"));
+  const window = buildSearchWindow(url, theme?.defaultDays ?? DEFAULT_DAYS);
+  const queryTerms = normalizeSearchTerms(url.searchParams.getAll("term").map((term) => term.trim()).filter(Boolean));
+  const terms = theme ? normalizeSearchTerms([...theme.terms, ...queryTerms]) : queryTerms;
+
+  if (!theme && terms.length === 0) {
+    throw new Error("No-theme searches require at least one term");
+  }
+
+  const rowsPerQuery = parsePositiveInt(url.searchParams.get("rowsPerQuery"), DEFAULT_ROWS_PER_QUERY, "rowsPerQuery");
+  const maxResults = Math.min(parsePositiveInt(url.searchParams.get("maxResults"), DEFAULT_MAX_RESULTS, "maxResults"), DEFAULT_MAX_RESULTS);
+  const mailto = (url.searchParams.get("mailto") || "").trim() || null;
+
+  return {
+    theme,
+    themeId: theme ? theme.id : NO_THEME_ID,
+    window,
+    queryTerms,
+    terms,
+    rowsPerQuery,
+    maxResults,
+    mailto,
+  };
+}
+
+function buildSearchCacheKey(context) {
+  const params = new URLSearchParams();
+  params.set("theme", context.themeId);
+  params.set("from", context.window.from);
+  params.set("to", context.window.to);
+  params.set("rowsPerQuery", String(context.rowsPerQuery));
+  params.set("maxResults", String(context.maxResults));
+  for (const term of [...context.terms].sort((a, b) => a.localeCompare(b))) {
+    params.append("term", term);
+  }
+  return params.toString();
+}
+
+function buildExecSumCacheKey(searchCacheKey) {
+  return `${searchCacheKey}&summary=gpt-5-nano-v1`;
+}
+
 async function fetchCrossrefItems(term, fromDate, untilDate, rows, mailto, timeoutMs) {
   const params = new URLSearchParams({
     "query.title": term,
@@ -577,22 +661,15 @@ async function fetchCrossrefItems(term, fromDate, untilDate, rows, mailto, timeo
   }
 }
 
-async function buildNewsPayload(url) {
-  const theme = getTheme(url.searchParams.get("theme"));
-  const rowsPerQuery = parsePositiveInt(url.searchParams.get("rowsPerQuery"), DEFAULT_ROWS_PER_QUERY, "rowsPerQuery");
-  const maxResults = parsePositiveInt(url.searchParams.get("maxResults"), DEFAULT_MAX_RESULTS, "maxResults");
-  const mailto = (url.searchParams.get("mailto") || "").trim() || null;
-  const queryTerms = url.searchParams.getAll("term").map((term) => term.trim()).filter(Boolean);
-  const terms = normalizeSearchTerms([...theme.terms, ...queryTerms]);
-  const window = buildSearchWindow(url, theme.defaultDays ?? DEFAULT_DAYS);
-
+async function computeSearchBundle(context) {
   const rawRecords = [];
   const seenPairs = new Set();
-  for (const term of terms) {
-    const items = await fetchCrossrefItems(term, window.from, window.to, rowsPerQuery, mailto, 15000);
+
+  for (const term of context.terms) {
+    const items = await fetchCrossrefItems(term, context.window.from, context.window.to, context.rowsPerQuery, context.mailto, 15000);
     for (const item of items) {
       const record = recordFromItem(item, term);
-      if (!isRelevant(record, terms)) {
+      if (!isRelevant(record, context.terms)) {
         continue;
       }
 
@@ -608,30 +685,28 @@ async function buildNewsPayload(url) {
   }
 
   const uniqueRecords = dedupeRecords(rawRecords).sort(compareRecords);
-  const records = uniqueRecords.slice(0, maxResults);
+  const records = uniqueRecords.slice(0, context.maxResults);
 
   return {
     source: "crossref",
     backend: "cloudflare-workers-poc",
-    theme: {
-      id: theme.id,
-      label: theme.label,
-      description: theme.description,
-    },
+    theme: context.theme
+      ? {
+          id: context.theme.id,
+          label: context.theme.label,
+          description: context.theme.description,
+        }
+      : null,
+    searchMode: context.theme ? "theme" : "no-theme",
     window: {
-      from: window.from,
-      to: window.to,
-      days: window.days,
+      from: context.window.from,
+      to: context.window.to,
+      days: context.window.days,
     },
-    terms,
-    query: {
-      theme: theme.id,
-      from: url.searchParams.get("from") || null,
-      to: url.searchParams.get("to") || null,
-      rowsPerQuery,
-      maxResults,
-      mailto,
-    },
+    terms: context.terms,
+    queryTerms: context.queryTerms,
+    pageSize: DEFAULT_PAGE_SIZE,
+    maxResults: context.maxResults,
     count: uniqueRecords.length,
     rawCount: rawRecords.length,
     results: records.map((record) => ({
@@ -642,15 +717,239 @@ async function buildNewsPayload(url) {
       authors: record.authors,
       published: record.published,
       type: record.itemType,
+      abstract: record.abstract || null,
       matchedTerms: [...record.matchedTerms].sort(),
     })),
+    pagination: {
+      pageSize: DEFAULT_PAGE_SIZE,
+      maxResults: context.maxResults,
+      total: records.length,
+      hasMore: records.length > DEFAULT_PAGE_SIZE,
+    },
   };
+}
+
+async function getSearchBundle(request, context) {
+  const url = new URL(request.url);
+  const cacheKey = buildSearchCacheKey(context);
+  const cacheUrl = new URL("/__cache/news", url.origin);
+  cacheUrl.search = cacheKey;
+  const cacheRequest = new Request(cacheUrl.toString(), { method: "GET" });
+
+  if (pendingSearches.has(cacheKey)) {
+    const value = await pendingSearches.get(cacheKey);
+    return {
+      ...value,
+      cache: {
+        hit: true,
+        ttlSeconds: CACHE_TTL_SECONDS,
+      },
+    };
+  }
+
+  const pending = (async () => {
+    const cached = await caches.default.match(cacheRequest);
+    if (cached) {
+      const payload = await cached.json();
+      return {
+        ...payload,
+        cache: {
+          hit: true,
+          ttlSeconds: CACHE_TTL_SECONDS,
+        },
+      };
+    }
+
+    const payload = await computeSearchBundle(context);
+    const response = jsonResponse(payload, {
+      headers: {
+        "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}, s-maxage=${CACHE_TTL_SECONDS}`,
+      },
+    });
+    await caches.default.put(cacheRequest, response.clone());
+    return {
+      ...payload,
+      cache: {
+        hit: false,
+        ttlSeconds: CACHE_TTL_SECONDS,
+      },
+    };
+  })().finally(() => {
+    pendingSearches.delete(cacheKey);
+  });
+
+  pendingSearches.set(cacheKey, pending);
+  return pending;
+}
+
+function buildExecSumPrompt(bundle) {
+  const articles = bundle.results.map((record, index) => ({
+    index: index + 1,
+    title: record.title,
+    venue: record.venue || null,
+    published: record.published,
+    authors: record.authors,
+    matchedTerms: record.matchedTerms,
+    abstract: record.abstract,
+  }));
+
+  return [
+    "You are summarizing Crossref search results for an academic briefing.",
+    "Use only the provided metadata and abstracts.",
+    "Return valid JSON with exactly this shape:",
+    '{ "takeaways": ["...", "...", "..."], "paragraph": "..." }',
+    "Rules:",
+    "- takeaways must be exactly 3 short bullet strings",
+    "- paragraph must be one dense, neutral paragraph",
+    "- do not add markdown or extra keys",
+    "- if abstracts are missing, rely on the title, venue, published date, and matched terms only",
+    "",
+    "Search bundle:",
+    JSON.stringify(
+      {
+        theme: bundle.theme,
+        searchMode: bundle.searchMode,
+        window: bundle.window,
+        counts: {
+          total: bundle.count,
+          raw: bundle.rawCount,
+          returned: bundle.results.length,
+        },
+        articles,
+      },
+      null,
+      2,
+    ),
+  ].join("\n");
+}
+
+function normalizeExecSumPayload(value) {
+  if (!value || typeof value !== "object") {
+    throw new Error("OpenAI response did not contain a usable summary");
+  }
+
+  const takeaways = Array.isArray(value.takeaways)
+    ? value.takeaways
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+        .slice(0, 3)
+    : [];
+
+  const paragraph = String(value.paragraph || "").trim();
+  if (takeaways.length < 3 || !paragraph) {
+    throw new Error("OpenAI response did not contain the expected summary fields");
+  }
+
+  return {
+    takeaways,
+    paragraph,
+  };
+}
+
+async function generateExecSum(context, bundle) {
+  const cacheKey = buildExecSumCacheKey(buildSearchCacheKey(context));
+  const url = new URL(context.requestUrl);
+  const cacheUrl = new URL("/__cache/execsum", url.origin);
+  cacheUrl.search = cacheKey;
+  const cacheRequest = new Request(cacheUrl.toString(), { method: "GET" });
+
+  if (pendingExecSums.has(cacheKey)) {
+    const value = await pendingExecSums.get(cacheKey);
+    return {
+      ...value,
+      cache: {
+        hit: true,
+        ttlSeconds: CACHE_TTL_SECONDS,
+      },
+    };
+  }
+
+  const pending = (async () => {
+    const cached = await caches.default.match(cacheRequest);
+    if (cached) {
+      const payload = await cached.json();
+      return {
+        ...payload,
+        cache: {
+          hit: true,
+          ttlSeconds: CACHE_TTL_SECONDS,
+        },
+      };
+    }
+
+    if (!context.env?.OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is required for /execsum");
+    }
+
+    const response = await fetch(OPENAI_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${context.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: EXEC_SUM_MODEL,
+        temperature: 0.2,
+        response_format: {
+          type: "json_object",
+        },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You write short executive summaries for academic search results. Stay neutral, evidence-led, and concise.",
+          },
+          {
+            role: "user",
+            content: buildExecSumPrompt(bundle),
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const bodyText = await response.text();
+      throw new Error(`OpenAI request failed with HTTP ${response.status}: ${bodyText}`);
+    }
+
+    const payload = await response.json();
+    const content = payload?.choices?.[0]?.message?.content;
+    const parsed = typeof content === "string" ? JSON.parse(content) : content;
+    const summary = normalizeExecSumPayload(parsed);
+    const result = {
+      model: EXEC_SUM_MODEL,
+      summary,
+      source: "openai",
+      cache: {
+        hit: false,
+        ttlSeconds: CACHE_TTL_SECONDS,
+      },
+    };
+
+    const responseToCache = jsonResponse(result, {
+      headers: {
+        "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}, s-maxage=${CACHE_TTL_SECONDS}`,
+      },
+    });
+    await caches.default.put(cacheRequest, responseToCache.clone());
+    return result;
+  })().finally(() => {
+    pendingExecSums.delete(cacheKey);
+  });
+
+  pendingExecSums.set(cacheKey, pending);
+  return pending;
 }
 
 function landingResponse(url) {
   return jsonResponse({
     service: "Crossref News",
     defaultTheme: DEFAULT_THEME_ID,
+    noTheme: {
+      id: NO_THEME_ID,
+      label: "No theme",
+      description: "Search only the terms you enter, without a preset theme.",
+    },
     themes: Object.values(THEMES).map((theme) => ({
       id: theme.id,
       label: theme.label,
@@ -660,25 +959,74 @@ function landingResponse(url) {
     })),
     endpoints: {
       news: `${url.origin}/news`,
+      execsum: `${url.origin}/execsum`,
     },
     usage: {
       method: "GET",
       query: {
-        theme: "theme id, default fraud-detection",
+        theme: "theme id or none",
         from: "optional ISO date YYYY-MM-DD",
         to: "optional ISO date YYYY-MM-DD",
         days: "positive integer, default 7",
         rowsPerQuery: "positive integer, default 25",
-        maxResults: "positive integer, default 25",
+        maxResults: "positive integer, default 50",
         mailto: "optional contact email",
         term: "repeatable query term",
       },
+    },
+    caching: {
+      ttlSeconds: CACHE_TTL_SECONDS,
+      news: "Search bundles are cached for 1 hour by canonical query.",
+      execsum: "Executive summaries are cached for 1 hour by canonical query.",
+    },
+  });
+}
+
+async function buildNewsResponse(request, env) {
+  const url = new URL(request.url);
+  const context = buildSearchContext(url);
+  const bundle = await getSearchBundle(request, context);
+
+  return jsonResponse(bundle, {
+    headers: {
+      "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}, s-maxage=${CACHE_TTL_SECONDS}`,
+    },
+  });
+}
+
+async function buildExecSumResponse(request, env) {
+  const url = new URL(request.url);
+  const context = buildSearchContext(url);
+  context.requestUrl = request.url;
+  context.env = env;
+  const bundle = await getSearchBundle(request, context);
+  const execsum = await generateExecSum(context, bundle);
+
+  return jsonResponse({
+    ...execsum,
+    query: {
+      theme: context.themeId,
+      from: context.window.from,
+      to: context.window.to,
+      rowsPerQuery: context.rowsPerQuery,
+      maxResults: context.maxResults,
+      term: context.terms,
+    },
+    search: {
+      count: bundle.count,
+      rawCount: bundle.rawCount,
+      returned: bundle.results.length,
+      cache: bundle.cache,
+    },
+  }, {
+    headers: {
+      "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}, s-maxage=${CACHE_TTL_SECONDS}`,
     },
   });
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -691,7 +1039,11 @@ export default {
 
     try {
       if (url.pathname === "/news") {
-        return jsonResponse(await buildNewsPayload(url));
+        return buildNewsResponse(request, env);
+      }
+
+      if (url.pathname === "/execsum") {
+        return buildExecSumResponse(request, env);
       }
 
       return landingResponse(url);
