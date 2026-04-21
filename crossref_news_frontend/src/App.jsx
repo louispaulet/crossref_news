@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import BriefingHero from './components/BriefingHero'
+import ResultsSection, { formatPublicationTypeLabel } from './components/ResultsSection'
+import SearchPanel from './components/SearchPanel'
 import PageOrnaments from './components/PageOrnaments'
 import SiteFooter from './components/SiteFooter'
+import SummarySection from './components/SummarySection'
+import TechnicalDetails from './components/TechnicalDetails'
 
 const FALLBACK_THEMES = [
   {
@@ -85,14 +90,14 @@ const EXEC_SUMMARY_TIMEOUT_MS = 60000
 const EXEC_SUMMARY_FIRST_PHASE_MS = 30000
 const EXEC_SUMMARY_TICK_MS = 500
 const EXEC_SUMMARY_PROGRESS_CAP = 98.4
-const EXEC_SUMMARY_SLOW_MESSAGE = "sorry, we're slow today..."
+const EXEC_SUMMARY_SLOW_MESSAGE = 'The summary is taking longer than usual.'
 const EXEC_SUMMARY_LOADING_MESSAGES = [
-  'Checking whether the signal converges.',
-  'Waiting for the citation dust to settle.',
-  'Letting the abstract reactor finish warming up.',
-  'Measuring the signal-to-noise ratio.',
-  'Crossref metadata is still doing the math.',
-  'The summary centrifuge is still spinning.',
+  'Reviewing the current result set.',
+  'Checking the available abstracts.',
+  'Synthesizing the briefing.',
+  'Waiting for the summary response.',
+  'Crossref metadata is still loading.',
+  'Preparing the executive summary.',
 ]
 
 const FALLBACK_CONFIG = {
@@ -252,6 +257,27 @@ function truncateWords(text, maxWords = 60) {
   }
 }
 
+function formatSortLabel(sortOrder) {
+  const labels = {
+    relevance: 'Sort: relevance',
+    newest: 'Sort: newest',
+    oldest: 'Sort: oldest',
+    title: 'Sort: title',
+  }
+
+  return labels[sortOrder] || labels.relevance
+}
+
+function formatAbstractFilterLabel(value) {
+  const labels = {
+    all: 'Abstracts: any',
+    available: 'Abstracts: with text',
+    missing: 'Abstracts: without text',
+  }
+
+  return labels[value] || labels.all
+}
+
 function formatPublishedDate(value) {
   if (!value || value === 'unknown date') {
     return 'Unknown date'
@@ -292,6 +318,28 @@ function formatPublishedDate(value) {
   return new Intl.DateTimeFormat('en', {
     dateStyle: 'medium',
   }).format(parsed)
+}
+
+function publishedDateToTimestamp(value) {
+  if (!value || value === 'unknown date') {
+    return 0
+  }
+
+  if (/^\d{4}$/.test(value)) {
+    return Date.UTC(Number(value), 0, 1)
+  }
+
+  if (/^\d{4}-\d{2}$/.test(value)) {
+    const [year, month] = value.split('-').map(Number)
+    return Date.UTC(year, month - 1, 1)
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return Date.parse(`${value}T00:00:00Z`)
+  }
+
+  const parsed = Date.parse(value)
+  return Number.isNaN(parsed) ? 0 : parsed
 }
 
 function buildSearchRequest({
@@ -377,6 +425,9 @@ function App() {
   const [summaryError, setSummaryError] = useState('')
   const [visibleCount, setVisibleCount] = useState(DEFAULT_PAGE_SIZE)
   const [newsPageSize, setNewsPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [sortOrder, setSortOrder] = useState('relevance')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [abstractFilter, setAbstractFilter] = useState('all')
   const [searchRequestId, setSearchRequestId] = useState(1)
   const summaryRunIdRef = useRef(0)
 
@@ -389,9 +440,62 @@ function App() {
     themeOptions[1] ||
     themeOptions[0]
   const isNoTheme = selectedTheme === NO_THEME_OPTION.id
-  const visibleArticles = articles.slice(0, Math.min(visibleCount, DEFAULT_MAX_VISIBLE))
-  const hiddenCount = Math.max(articles.length - visibleArticles.length, 0)
+  const filteredArticles = articles.filter((article) => {
+    const articleType = article.type || 'unknown'
+
+    if (typeFilter !== 'all' && articleType !== typeFilter) {
+      return false
+    }
+
+    if (abstractFilter === 'available' && !article.abstract) {
+      return false
+    }
+
+    if (abstractFilter === 'missing' && article.abstract) {
+      return false
+    }
+
+    return true
+  })
+
+  const sortedArticles = [...filteredArticles].sort((a, b) => {
+    if (sortOrder === 'title') {
+      return a.title.localeCompare(b.title)
+    }
+
+    if (sortOrder === 'oldest') {
+      return publishedDateToTimestamp(a.published) - publishedDateToTimestamp(b.published)
+    }
+
+    if (sortOrder === 'newest') {
+      return publishedDateToTimestamp(b.published) - publishedDateToTimestamp(a.published)
+    }
+
+    return 0
+  })
+
+  const visibleArticles = sortedArticles.slice(0, Math.min(visibleCount, DEFAULT_MAX_VISIBLE))
+  const hiddenCount = Math.max(sortedArticles.length - visibleArticles.length, 0)
   const summaryTimedOut = summaryPhase === 'timed_out'
+  const summaryStateLabel = summary?.cache?.hit ? 'Cached' : summary ? 'Fresh' : 'Pending'
+  const summaryEvidence = (summary?.summary?.takeaways || []).map((_, index) =>
+    visibleArticles.slice(index * 2, index * 2 + 2),
+  )
+  const filterSummary = [
+    formatSortLabel(sortOrder),
+    `Type: ${typeFilter === 'all' ? 'any' : formatPublicationTypeLabel(typeFilter)}`,
+    formatAbstractFilterLabel(abstractFilter),
+  ]
+  const currentTerms = Array.from(
+    new Set(isNoTheme ? parseTerms(extraTerms) : [...(activeTheme.terms || []), ...parseTerms(extraTerms)]),
+  )
+  const resultTypeOptions = [
+    { value: 'all', label: 'All types' },
+    ...Array.from(new Set(articles.map((article) => article.type || 'unknown'))).map((type) => ({
+      value: type,
+      label: formatPublicationTypeLabel(type),
+    })),
+  ]
 
   useEffect(() => {
     let alive = true
@@ -715,6 +819,10 @@ function App() {
     }
   }, [apiBaseUrl, searchRequestId])
 
+  useEffect(() => {
+    setVisibleCount(DEFAULT_PAGE_SIZE)
+  }, [sortOrder, typeFilter, abstractFilter])
+
   const handleReset = () => {
     const defaultTheme = themes.find((theme) => theme.id === defaultThemeId) || themes[0] || FALLBACK_THEMES[0]
     const defaults = createDefaultWindow(defaultTheme?.defaultDays || 7)
@@ -722,6 +830,9 @@ function App() {
     setExtraTerms('')
     setFromDate(defaults.from)
     setToDate(defaults.to)
+    setSortOrder('relevance')
+    setTypeFilter('all')
+    setAbstractFilter('all')
     setVisibleCount(DEFAULT_PAGE_SIZE)
     setNewsPageSize(DEFAULT_PAGE_SIZE)
     setForceRefresh(false)
@@ -729,7 +840,9 @@ function App() {
   }
 
   const handleLoadMore = () => {
-    setVisibleCount((current) => Math.min(current + newsPageSize, articles.length, DEFAULT_MAX_VISIBLE))
+    setVisibleCount((current) =>
+      Math.min(current + newsPageSize, sortedArticles.length, DEFAULT_MAX_VISIBLE),
+    )
   }
 
   return (
@@ -737,489 +850,80 @@ function App() {
       <PageOrnaments />
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.24),_transparent_55%),radial-gradient(circle_at_75%_15%,_rgba(99,102,241,0.18),_transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.96),rgba(7,17,31,1))]" />
       <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8">
-        <header className="border-b border-white/10 pb-4">
-          <div className="max-w-5xl space-y-3">
-            <div className="flex items-center gap-4">
-              <img
-                src="/ornaments/crossref-mark.svg"
-                alt=""
-                className="h-11 w-11 shrink-0 rounded-2xl border border-white/10 bg-white/5 p-1.5 shadow-lg shadow-slate-950/20 lg:h-12 lg:w-12"
-              />
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-sky-300/80">
-                  Crossref News
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Crossref metadata, theme filters, and optional extra terms.
-                </p>
-              </div>
-            </div>
-            <h1 className="max-w-5xl text-3xl font-semibold tracking-tight text-white leading-[0.95] sm:text-4xl lg:text-[4.4rem]">
-              A briefing on recent academic work about fraud detection.
-            </h1>
-            <p className="max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
-              Search recent Crossref metadata for fraud detection, anomaly detection, XGBoost,
-              graph methods, and adjacent work. Source: Crossref metadata with optional theme
-              filters and extra terms.
-            </p>
-          </div>
-        </header>
+        <BriefingHero
+          eyebrow="Crossref News"
+          title="Track newly published fraud-detection research."
+          intro="Search recent Crossref metadata, review a short executive summary, and open the source records when you want the full bibliographic detail."
+          highlights={['Monitor new papers', 'Review a briefing', 'Open source records']}
+        />
 
-        <section className="rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-xl shadow-slate-950/20 backdrop-blur sm:p-5">
-          <form
-            className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[1.35fr_1.2fr_0.85fr_0.85fr_auto]"
+        <div className="space-y-4 py-5">
+          <SearchPanel
+            themeOptions={themeOptions}
+            selectedTheme={selectedTheme}
+            onThemeChange={setSelectedTheme}
+            extraTerms={extraTerms}
+            onExtraTermsChange={setExtraTerms}
+            fromDate={fromDate}
+            onFromDateChange={setFromDate}
+            toDate={toDate}
+            onToDateChange={setToDate}
+            forceRefresh={forceRefresh}
+            onForceRefreshChange={setForceRefresh}
+            loading={loading}
+            summaryLoading={summaryLoading}
             onSubmit={(event) => {
               event.preventDefault()
               setSearchRequestId((value) => value + 1)
             }}
-          >
-            <label className="min-w-0 space-y-2">
-              <span className="block text-[11px] uppercase tracking-[0.28em] text-slate-500">
-                Theme
-              </span>
-              <select
-                id="theme"
-                name="theme"
-                value={selectedTheme}
-                onChange={(event) => setSelectedTheme(event.target.value)}
-                className="h-14 w-full rounded-[1.15rem] border border-white/10 bg-slate-950/70 px-4 text-slate-100 outline-none transition focus:border-sky-400/40"
-              >
-                {themeOptions.map((theme) => (
-                  <option key={theme.id} value={theme.id}>
-                    {theme.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            primaryButtonClass={primaryButtonClass}
+          />
 
-            <label className="min-w-0 space-y-2">
-              <span className="block text-[11px] uppercase tracking-[0.28em] text-slate-500">
-                Additional terms
-              </span>
-              <input
-                id="extra-terms"
-                name="extra-terms"
-                value={extraTerms}
-                onChange={(event) => setExtraTerms(event.target.value)}
-                placeholder="fraud graph, XGBoost, chargeback"
-                className="h-14 w-full rounded-[1.15rem] border border-white/10 bg-slate-950/70 px-4 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-400/40"
-              />
-            </label>
+          <SummarySection
+            summary={summary}
+            summaryLoading={summaryLoading}
+            summaryTimedOut={summaryTimedOut}
+            summaryError={summaryError}
+            summaryNote={summaryNote}
+            summaryProgress={summaryProgress}
+            summaryElapsedMs={summaryElapsedMs}
+            loadingMessage={getExecsumLoadingMessage(summaryElapsedMs)}
+            supportingRecords={summaryEvidence}
+            loadingStateLabel={summaryStateLabel}
+          />
 
-            <label className="min-w-0 space-y-2">
-              <span className="block text-[11px] uppercase tracking-[0.28em] text-slate-500">From</span>
-              <input
-                id="from-date"
-                name="from-date"
-                type="date"
-                value={fromDate}
-                onChange={(event) => setFromDate(event.target.value)}
-                className="h-14 w-full rounded-[1.15rem] border border-white/10 bg-slate-950/70 px-4 text-slate-100 outline-none transition focus:border-sky-400/40"
-              />
-            </label>
+          <ResultsSection
+            error={error}
+            loading={loading}
+            articles={sortedArticles}
+            visibleArticles={visibleArticles}
+            hiddenCount={hiddenCount}
+            queryInfo={queryInfo}
+            activeThemeLabel={queryInfo?.theme?.label || activeTheme.label}
+            currentFilterSummary={filterSummary}
+            sortOrder={sortOrder}
+            typeFilter={typeFilter}
+            abstractFilter={abstractFilter}
+            typeOptions={resultTypeOptions}
+            onSortOrderChange={setSortOrder}
+            onTypeFilterChange={setTypeFilter}
+            onAbstractFilterChange={setAbstractFilter}
+            onLoadMore={handleLoadMore}
+            secondaryButtonClass={secondaryButtonClass}
+            recordButtonClass={recordButtonClass}
+          />
 
-            <label className="min-w-0 space-y-2">
-              <span className="block text-[11px] uppercase tracking-[0.28em] text-slate-500">To</span>
-              <input
-                id="to-date"
-                name="to-date"
-                type="date"
-                value={toDate}
-                onChange={(event) => setToDate(event.target.value)}
-                className="h-14 w-full rounded-[1.15rem] border border-white/10 bg-slate-950/70 px-4 text-slate-100 outline-none transition focus:border-sky-400/40"
-              />
-            </label>
-
-            <div className="flex items-end gap-3 sm:col-span-2 xl:col-span-1">
-              <button
-                type="submit"
-                disabled={loading || summaryLoading}
-                className={`${primaryButtonClass} h-14 w-full rounded-[1.15rem] px-6 disabled:cursor-not-allowed disabled:bg-sky-400/60`}
-              >
-                {loading || summaryLoading ? 'Updating...' : 'Update briefing'}
-              </button>
-            </div>
-
-            <label className="flex items-center gap-3 rounded-[1.15rem] border border-white/10 bg-slate-950/45 px-4 py-3 text-sm text-slate-300 sm:col-span-2 xl:col-span-5">
-              <input
-                type="checkbox"
-                checked={forceRefresh}
-                onChange={(event) => setForceRefresh(event.target.checked)}
-                className="h-4 w-4 rounded border-white/20 bg-slate-950 text-sky-400 focus:ring-sky-300"
-              />
-              <span className="leading-6">
-                Force refresh results and executive summary
-              </span>
-              <span className="ml-auto text-xs uppercase tracking-[0.25em] text-slate-500">
-                Bypass the 1 h cache
-              </span>
-            </label>
-          </form>
-
-          <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-400">
-            <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              Theme presets
-            </span>
-            <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              Local paging
-            </span>
-            <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-              Crossref metadata
-            </span>
-          </div>
-
-          <details className="mt-4 rounded-[1.75rem] border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/15 sm:p-5">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl outline-none">
-              <div>
-                <h2 className="text-base font-semibold text-white">Current theme</h2>
-                <p className="mt-1 text-sm text-slate-400">Selected in the dropdown.</p>
-              </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
-                Details
-              </span>
-            </summary>
-
-            <div className="mt-5 flex justify-end">
-              <button type="button" onClick={handleReset} className={secondaryButtonClass}>
-                Reset filters
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Theme</div>
-                <div className="mt-1 font-medium text-white">{activeTheme.label}</div>
-              </div>
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Description</div>
-                <div className="mt-1 leading-6">{activeTheme.description}</div>
-              </div>
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Default terms</div>
-                {activeTheme.terms?.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {activeTheme.terms.map((term) => (
-                      <span
-                        key={term}
-                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
-                      >
-                        {term}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-2 leading-6 text-slate-400">
-                    No preset terms. Enter one or more additional terms before running the search.
-                  </p>
-                )}
-              </div>
-            </div>
-          </details>
-        </section>
-
-        <section className="space-y-4 py-6">
-          <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-white">Executive summary</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  The backend uses the full result set and all available abstracts.
-                </p>
-              </div>
-              <div className="text-sm text-slate-400">
-                {summary?.cache?.hit ? 'Cached' : summary ? 'Fresh' : 'Pending'}
-              </div>
-            </div>
-
-            {summaryError ? (
-              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-amber-50">
-                {summaryError}
-              </div>
-            ) : null}
-
-            {summaryLoading ? (
-              <div className="mt-5 space-y-4">
-                <div
-                  className="summary-progress-shell"
-                  role="progressbar"
-                  aria-label="Executive summary loading progress"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(summaryProgress)}
-                  aria-valuetext={`Executive summary loading, ${Math.round(summaryProgress)} percent`}
-                >
-                  <div
-                    className="summary-progress-fill"
-                    style={{ width: `${summaryProgress}%` }}
-                  />
-                </div>
-                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                  <p className="text-sm leading-6 text-slate-300">
-                    {getExecsumLoadingMessage(summaryElapsedMs)}
-                  </p>
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                    {Math.round(summaryProgress)}%
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {summaryTimedOut ? (
-              <div
-                className="mt-5 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 text-sm leading-6 text-slate-300"
-                role="status"
-                aria-live="polite"
-              >
-                <span>{EXEC_SUMMARY_SLOW_MESSAGE.slice(0, -3)}</span>
-                <span className="summary-slow-dots" aria-hidden="true">
-                  <span className="summary-slow-dot">.</span>
-                  <span className="summary-slow-dot">.</span>
-                  <span className="summary-slow-dot">.</span>
-                </span>
-              </div>
-            ) : null}
-
-            {summary && !summaryLoading ? (
-              <div className="mt-5 space-y-4">
-                <ul className="space-y-2">
-                  {(summary.summary?.takeaways || []).slice(0, 3).map((item, index) => (
-                    <li
-                      key={`${index}-${item}`}
-                      className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-200"
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <p className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 leading-7 text-slate-200">
-                  {summary.summary?.paragraph}
-                </p>
-              </div>
-            ) : null}
-
-            {!summary && !summaryLoading && !summaryError ? (
-              <p className="mt-4 text-sm leading-6 text-slate-400">
-                Run a search to generate an executive summary.
-              </p>
-            ) : null}
-
-            <div className="mt-4 flex flex-wrap gap-2 text-sm text-slate-400">
-              <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-1">
-                {summaryNote}
-              </span>
-            </div>
-          </div>
-
-          <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-white">Latest records</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  {queryInfo
-                    ? `Found ${queryInfo.count} deduplicated records from ${queryInfo.rawCount} raw Crossref matches.`
-                    : 'Run a search to load the briefing.'}
-                </p>
-              </div>
-              <div className="text-sm text-slate-400">
-                {queryInfo?.theme?.label || activeTheme.label}
-              </div>
-            </div>
-
-            {error ? (
-              <div className="mb-4 rounded-3xl border border-rose-400/20 bg-rose-500/10 p-4 text-rose-100">
-                {error}
-              </div>
-            ) : null}
-
-            {!loading && visibleArticles.length === 0 ? (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center text-slate-300">
-                No items matched this window. Try a broader term or a wider date range.
-              </div>
-            ) : null}
-
-            {loading ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="animate-pulse rounded-3xl border border-white/10 bg-slate-900/70 p-5"
-                  >
-                    <div className="h-4 w-24 rounded-full bg-white/10" />
-                    <div className="mt-4 h-6 w-5/6 rounded bg-white/10" />
-                    <div className="mt-3 h-4 w-full rounded bg-white/10" />
-                    <div className="mt-2 h-4 w-4/5 rounded bg-white/10" />
-                    <div className="mt-5 h-10 w-full rounded bg-white/10" />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            {!loading && visibleArticles.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
-                  <span>
-                    Showing {visibleArticles.length} of {articles.length} records.
-                  </span>
-                  <span>
-                    {hiddenCount > 0
-                      ? `${hiddenCount} more hidden locally.`
-                      : 'All loaded records are visible.'}
-                  </span>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {visibleArticles.map((article) => (
-                    <article
-                      key={`${article.doi || article.title}-${article.published}`}
-                      className="rounded-3xl border border-white/10 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/20"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="rounded-full bg-sky-400/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-sky-200">
-                          {article.type || 'publication'}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          {formatPublishedDate(article.published)}
-                        </span>
-                      </div>
-
-                      <h3 className="mt-4 text-lg font-semibold leading-tight text-white">
-                        {article.title}
-                      </h3>
-
-                      <p className="mt-2 text-sm leading-6 text-slate-300">
-                        {formatAuthors(article.authors)}
-                      </p>
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {(article.matchedTerms || []).slice(0, 4).map((term) => (
-                          <span
-                            key={term}
-                            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
-                          >
-                            {term}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="mt-3 text-sm leading-6 text-slate-400">
-                        {article.abstract ? (() => {
-                          const abstractPreview = truncateWords(article.abstract, 60)
-
-                          return (
-                            <>
-                              {abstractPreview.text}
-                              {abstractPreview.truncated ? (
-                                <em> (truncated)</em>
-                              ) : null}
-                            </>
-                          )
-                        })() : (
-                          'No abstract available in Crossref metadata.'
-                        )}
-                      </div>
-
-                      <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-slate-400">
-                        <span>{article.venue || 'Venue not listed'}</span>
-                        {article.url ? (
-                          <a
-                            href={article.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={recordButtonClass}
-                          >
-                            Open record
-                            <span aria-hidden="true">→</span>
-                          </a>
-                        ) : (
-                          <span className="text-slate-500">No link available</span>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-
-                {hiddenCount > 0 ? (
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={handleLoadMore}
-                      className={secondaryButtonClass}
-                    >
-                      Load more
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="rounded-[1.75rem] border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/20 backdrop-blur sm:p-5">
-            <h2 className="text-lg font-semibold text-white">Search status</h2>
-            <p className="mt-2 leading-6 text-slate-400">{backendNote}</p>
-            <div className="mt-3 space-y-3">
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Window</div>
-                <div className="mt-1 text-slate-100">
-                  {windowInfo?.from && windowInfo?.to ? `${windowInfo.from} to ${windowInfo.to}` : 'Loading'}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Search mode</div>
-                <div className="mt-1 text-slate-100">
-                  {queryInfo?.searchMode || (isNoTheme ? 'no-theme' : 'theme')}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Paging</div>
-                <div className="mt-1 text-slate-100">
-                  {queryInfo
-                    ? `${visibleArticles.length} visible of ${articles.length} loaded`
-                    : 'Waiting for results'}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Cache</div>
-                <div className="mt-1 text-slate-100">
-                  {queryInfo?.cacheHit ? 'Using cached search data' : 'Fresh search data'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-sm text-slate-300 shadow-lg shadow-slate-950/20 backdrop-blur sm:p-5">
-            <h2 className="text-lg font-semibold text-white">Current query</h2>
-            <div className="mt-3 space-y-3">
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Theme</div>
-                <div className="mt-1 font-medium text-white">{activeTheme.label}</div>
-              </div>
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Description</div>
-                <div className="mt-1 leading-6">{activeTheme.description}</div>
-              </div>
-              <div className="rounded-2xl bg-[#0b1324] px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-500">Summary cache</div>
-                <div className="mt-1 text-white">{summary?.cache?.hit ? 'Cached' : 'Fresh or pending'}</div>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {(activeTheme.terms || []).length > 0 ? (
-                activeTheme.terms.map((term) => (
-                  <span
-                    key={term}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300"
-                  >
-                    {term}
-                  </span>
-                ))
-              ) : (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-                  Enter your own terms
-                </span>
-              )}
-            </div>
-          </div>
-        </section>
+          <TechnicalDetails
+            activeTheme={activeTheme}
+            windowInfo={windowInfo}
+            queryInfo={queryInfo}
+            backendNote={backendNote}
+            summaryCacheLabel={summaryStateLabel}
+            currentTerms={currentTerms}
+            onReset={handleReset}
+            secondaryButtonClass={secondaryButtonClass}
+          />
+        </div>
 
         <SiteFooter />
       </main>

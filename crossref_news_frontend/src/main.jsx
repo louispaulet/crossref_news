@@ -16,17 +16,17 @@ const legalNoticeSections = [
   {
     heading: 'Publisher',
     paragraphs: [
-      'Publisher: [replace with legal entity name].',
-      'Contact: [replace with email address].',
-      'Editorial responsibility: [replace with name or role].',
+      'Publisher: the maintainer of this GitHub repository.',
+      'Contact: use the GitHub repository issues page for feedback or corrections.',
+      'Editorial responsibility: the project owner and repository maintainer.',
     ],
   },
   {
     heading: 'Hosting',
     paragraphs: [
-      'Hosting provider: [replace with hosting provider].',
-      'Address: [replace with hosting address].',
-      'Technical platform: Cloudflare Worker backend and GitHub Pages frontend.',
+      'Frontend hosting: GitHub Pages.',
+      'Backend hosting: Cloudflare Workers.',
+      'Technical platform: a React and Vite frontend with a Cloudflare Worker API.',
     ],
   },
 ]
@@ -94,9 +94,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               sections={legalNoticeSections}
               sidebarTitle="Key details"
               sidebarItems={[
-                { label: 'Document status', value: 'Working draft with placeholders' },
+                { label: 'Document status', value: 'Public copy' },
                 { label: 'Language', value: 'English' },
-                { label: 'Last review', value: 'Update this before publication' },
+                { label: 'Last review', value: 'Updated for production use' },
               ]}
             />
           }
@@ -112,7 +112,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               sidebarItems={[
                 { label: 'Accounts', value: 'None' },
                 { label: 'Analytics cookies', value: 'None intentionally' },
-                { label: 'Contact field', value: 'Optional mailto parameter' },
+                { label: 'Contact field', value: 'GitHub issues or repo links' },
               ]}
             />
           }
