@@ -13,7 +13,7 @@ export VITE_API_BASE_URL OPENAI_API_KEY CLOUDFLARE_API_TOKEN
 VITE_BASE_PATH ?= /
 VITE_API_BASE_URL ?=
 
-.PHONY: up kill deploy
+.PHONY: up kill test build deploy
 
 up:
 	@mkdir -p "$(STATE_DIR)"
@@ -46,6 +46,12 @@ kill:
 			fi; \
 		done; \
 		echo "Stopped frontend and backend processes if they were running."'
+
+test:
+	@npm --prefix "$(FRONTEND_DIR)" run build
+
+build:
+	@VITE_BASE_PATH="$(VITE_BASE_PATH)" VITE_API_BASE_URL="$(VITE_API_BASE_URL)" npm --prefix "$(FRONTEND_DIR)" run build
 
 deploy:
 	@test -n "$(VITE_API_BASE_URL)" || (echo "Set VITE_API_BASE_URL to the deployed Worker URL before running make deploy." && exit 1)
